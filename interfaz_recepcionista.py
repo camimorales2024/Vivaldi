@@ -50,7 +50,8 @@ def solo_letras(texto):
 def interfaz_recepcionista(usuario=None, rol=None):
 
     ventana = tk.Tk()
-    ventana.title("Restaurante Vivaldi - Recepcionista")
+    ventana.state("zoomed")
+    ventana.title("Restaurante Vivaldi | Recepcionista")
     ventana.geometry("1100x720")
     ventana.resizable(False, False)
     ventana.configure(bg=CREMA)
@@ -62,10 +63,6 @@ def interfaz_recepcionista(usuario=None, rol=None):
 
     id_empleado = None
     id_cliente_actual = [None]
-
-    # =========================================================
-    # OBTENER ID DEL EMPLEADO
-    # =========================================================
 
     if usuario:
         conexion = conectar()
@@ -101,10 +98,6 @@ def interfaz_recepcionista(usuario=None, rol=None):
                     cursor.close()
 
                 conexion.close()
-
-    # =========================================================
-    # ESTILOS
-    # =========================================================
 
     estilo = ttk.Style()
 
@@ -279,6 +272,7 @@ def interfaz_recepcionista(usuario=None, rol=None):
         area_central,
         bg=CREMA
     )
+
 
     def mostrar_panel(panel):
 
@@ -2279,73 +2273,13 @@ def interfaz_recepcionista(usuario=None, rol=None):
         foreground=VINO
     )
 
-    # =========================================================
-    # ESTADOS AUTOMÁTICOS
-    # =========================================================
-
     def actualizar_estados_automaticos():
-
-        conexion = conectar()
-
-        if not conexion:
-            return
-
-        cursor = None
-
-        try:
-
-            cursor = conexion.cursor()
-
-            cursor.execute(
-                """
-                UPDATE Reserva
-                SET estado = 'Completada'
-                WHERE estado IN ('Pendiente', 'Confirmada')
-                AND TIMESTAMP(fecha, hora)
-                    + INTERVAL 2 HOUR <= NOW()
-                """
-            )
-
-            cursor.execute(
-                """
-                UPDATE Mesa m
-                SET estado = CASE
-                    WHEN EXISTS (
-                        SELECT 1
-                        FROM Reserva r
-                        WHERE r.id_mesa = m.id_mesa
-                        AND r.estado IN ('Pendiente', 'Confirmada')
-                        AND TIMESTAMP(r.fecha, r.hora) <= NOW()
-                        AND TIMESTAMP(r.fecha, r.hora)
-                            + INTERVAL 2 HOUR > NOW()
-                    )
-                    THEN 'Ocupada'
-                    ELSE 'Disponible'
-                END
-                """
-            )
-
-            conexion.commit()
-
-        except mysql.connector.Error as error:
-
-            conexion.rollback()
-
-            print(
-                "Error al actualizar estados:",
-                error
-            )
-
-        finally:
-
-            if cursor:
-                cursor.close()
-
-            conexion.close()
-
-    # =========================================================
-    # MOSTRAR RESERVACIONES
-    # =========================================================
+        """
+        No modifica estados automáticamente.
+        Las reservas, órdenes y mesas deben actualizarse
+        después de comprobar el estado real de la orden y su pago.
+        """
+        return
 
     def mostrar_reservaciones(filtro=""):
 
@@ -2536,10 +2470,6 @@ def interfaz_recepcionista(usuario=None, rol=None):
         fill="both",
         expand=True
     )
-
-    # =========================================================
-    # CARGAR RESERVACIÓN
-    # =========================================================
 
     def cargar_reserva_por_id(id_reserva):
 
@@ -2740,10 +2670,6 @@ def interfaz_recepcionista(usuario=None, rol=None):
         "<Double-1>",
         cargar_reserva_seleccionada
     )
-
-    # =========================================================
-    # VER DETALLES
-    # =========================================================
 
     def ver_detalles_reserva():
 
@@ -4289,24 +4215,50 @@ def interfaz_recepcionista(usuario=None, rol=None):
         )
     )
 
-    # =========================================================
-    # CARGA INICIAL
-    # =========================================================
+    def cerrar_sesion():
+        respuesta = messagebox.askyesno(
+            "Cerrar sesión",
+            "¿Deseas cerrar sesión?"
+        )
+
+        if respuesta:
+            ventana.destroy()
+
+            # Volver a abrir el login
+            from inicio_sistema import iniciar_sesion
+            iniciar_sesion()
+
+    tk.Frame(
+        menu_navegacion,
+        bg=BEIGE,
+        height=1
+    ).pack(fill="x", pady=(18, 10))
+
+    tk.Button(
+        menu_navegacion,
+        text="CERRAR SESIÓN",
+        bg=VERDE_OSCURO,
+        fg=CREMA_CLARO,
+        activebackground=CREMA_CLARO,
+        activeforeground=BLANCO,
+        bd=0,
+        relief="flat",
+        anchor="w",
+        padx=10,
+        pady=13,
+        font=("Arial", 10, "bold"),
+        cursor="hand2",
+        command=cerrar_sesion
+    ).pack(fill="x", pady=4)
 
     mostrar_clientes()
-
     cargar_clientes_reserva()
-
     mostrar_reservaciones()
-
     mostrar_mesas()
-
     cargar_mesas()
-
     mostrar_panel(
         panel_clientes
     )
-
     actualizar_menu(
         boton_clientes
     )

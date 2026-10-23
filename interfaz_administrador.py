@@ -3,13 +3,24 @@ from tkinter import ttk, messagebox, filedialog
 from PIL import Image, ImageTk
 import mysql.connector
 import os
+import sys
 import shutil
 import uuid
-
-
-# =========================================================
-# CONFIGURACIÓN DE LA BASE DE DATOS
-# =========================================================
+import subprocess
+from tkinter import filedialog
+from datetime import datetime, date, timedelta
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle
+)
+from reportlab.lib.styles import getSampleStyleSheet
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
 
 HOST = "localhost"
 USER = "root"
@@ -17,17 +28,9 @@ PASSWORD = "sqldecami"
 DATABASE = "restaurante_vivaldi"
 
 
-# =========================================================
-# LOGOS
-# =========================================================
-
 LOGO_PNG = "vivaldi_sf.png"
 LOGO_ICO = "vivaldi.ico"
 
-
-# =========================================================
-# PALETA VIVALDI
-# =========================================================
 
 CREMA = "#fbf8f1"
 CREMA_CLARO = "#fbf7f1"
@@ -39,10 +42,6 @@ BLANCO = "#ffffff"
 GRIS = "#6f6f6f"
 GRIS_CLARO = "#e8e3da"
 
-
-# =========================================================
-# CONEXIÓN A MYSQL
-# =========================================================
 
 def conectar():
 
@@ -65,36 +64,23 @@ def conectar():
         return None
 
 
-# =========================================================
-# INTERFAZ DEL ADMINISTRADOR
-# =========================================================
-
 def interfaz_administrador():
 
     ventana = tk.Tk()
-
+    ventana.state("zoomed")
     ventana.title("Restaurante Vivaldi | Administrador")
     ventana.geometry("1100x720")
     ventana.configure(bg=CREMA)
     ventana.resizable(False, False)
 
 
-    # =====================================================
-    # ICONO
-    # =====================================================
-
     try:
 
         ventana.iconbitmap(LOGO_ICO)
 
     except:
-
         pass
 
-
-    # =====================================================
-    # CONTENEDOR PRINCIPAL
-    # =====================================================
 
     contenedor = tk.Frame(
         ventana,
@@ -105,11 +91,6 @@ def interfaz_administrador():
         fill="both",
         expand=True
     )
-
-
-    # =====================================================
-    # SIDEBAR
-    # =====================================================
 
     sidebar = tk.Frame(
         contenedor,
@@ -124,11 +105,6 @@ def interfaz_administrador():
 
     sidebar.pack_propagate(False)
 
-
-    # =====================================================
-    # CONTENIDO DE LA SIDEBAR
-    # =====================================================
-
     contenido_sidebar = tk.Frame(
         sidebar,
         bg=VERDE_OSCURO
@@ -140,10 +116,6 @@ def interfaz_administrador():
         anchor="center"
     )
 
-
-    # =====================================================
-    # LOGO
-    # =====================================================
 
     try:
 
@@ -176,11 +148,6 @@ def interfaz_administrador():
             pady=(0, 30)
         )
 
-
-    # =====================================================
-    # TÍTULO DE LA SIDEBAR
-    # =====================================================
-
     tk.Label(
         contenido_sidebar,
         text="ADMINISTRACIÓN",
@@ -192,10 +159,6 @@ def interfaz_administrador():
     )
 
 
-    # =====================================================
-    # MENÚ DE NAVEGACIÓN
-    # =====================================================
-
     menu_navegacion = tk.Frame(
         contenido_sidebar,
         bg=VERDE_OSCURO
@@ -205,11 +168,6 @@ def interfaz_administrador():
         fill="x",
         padx=15
     )
-
-
-    # =====================================================
-    # ÁREA PRINCIPAL
-    # =====================================================
 
     contenido = tk.Frame(
         contenedor,
@@ -221,11 +179,6 @@ def interfaz_administrador():
         fill="both",
         expand=True
     )
-
-
-    # =====================================================
-    # ÁREA CENTRAL
-    # =====================================================
 
     area_central = tk.Frame(
         contenido,
@@ -240,10 +193,6 @@ def interfaz_administrador():
         relheight=0.94
     )
 
-
-    # =====================================================
-    # TÍTULO PRINCIPAL
-    # =====================================================
 
     titulo_principal = tk.Label(
         area_central,
@@ -273,10 +222,6 @@ def interfaz_administrador():
     )
 
 
-    # =====================================================
-    # CONTENEDOR DE VISTAS
-    # =====================================================
-
     vista_actual = tk.Frame(
         area_central,
         bg=CREMA
@@ -287,19 +232,28 @@ def interfaz_administrador():
         expand=True
     )
 
+    def mostrar_encabezados(mostrar):
+        if mostrar:
+            titulo_principal.pack(
+                anchor="w",
+                pady=(5, 2),
+                before=vista_actual
+            )
 
-    # =====================================================
-    # LIMPIAR VISTA
-    # =====================================================
+            subtitulo_principal.pack(
+                anchor="w",
+                pady=(0, 20),
+                before=vista_actual
+            )
+        else:
+            titulo_principal.pack_forget()
+            subtitulo_principal.pack_forget()
+
 
     def limpiar_vista():
-
         for widget in vista_actual.winfo_children():
 
             widget.destroy()
-
-
-    # BOTONES DEL MENÚ
 
     botones_menu = {}
 
@@ -321,7 +275,6 @@ def interfaz_administrador():
                 font=("Arial", 10, "bold")
             )
 
-    # CREAR BOTÓN DEL MENÚ
     def crear_boton_menu(texto, comando):
 
         boton = tk.Button(
@@ -351,10 +304,6 @@ def interfaz_administrador():
         botones_menu[texto] = boton
 
         return boton
-
-    # =====================================================
-    # TARJETA DE RESUMEN
-    # =====================================================
 
     def crear_tarjeta(padre, titulo, valor, descripcion):
 
@@ -410,26 +359,13 @@ def interfaz_administrador():
         return tarjeta
 
 
-    # =====================================================
-    # DASHBOARD / INICIO
-    # =====================================================
-
-    # =====================================================
-    # DASHBOARD / INICIO
-    # =====================================================
     def mostrar_inicio():
         limpiar_vista()
+        mostrar_encabezados(True)
         activar_boton("INICIO")
 
-        # -------------------------------------------------
-        # RESUMEN
-        # -------------------------------------------------
         marco_resumen = tk.Frame(vista_actual, bg=CREMA)
         marco_resumen.pack(fill="x", pady=(0, 15))
-
-        # -------------------------------------------------
-        # DATOS DE LA BASE
-        # -------------------------------------------------
 
         ventas_hoy = 0.0
         total_mesas = 0
@@ -482,10 +418,6 @@ def interfaz_administrador():
 
                 conexion.close()
 
-        # -------------------------------------------------
-        # TARJETAS ADMINISTRATIVAS
-        # -------------------------------------------------
-
         crear_tarjeta(
             marco_resumen,
             "VENTAS DEL DÍA",
@@ -514,15 +446,9 @@ def interfaz_administrador():
             "Reservaciones para hoy"
         )
 
-        # =================================================
-        # FILA INFERIOR
-        # =================================================
         fila_inferior = tk.Frame(vista_actual, bg=CREMA)
         fila_inferior.pack(fill="both", expand=True)
 
-        # =================================================
-        # PRÓXIMAS RESERVACIONES
-        # =================================================
         marco_reservaciones = tk.Frame(
             fila_inferior,
             bg=BLANCO,
@@ -561,9 +487,6 @@ def interfaz_administrador():
             pady=(0, 10)
         )
 
-        # -------------------------------------------------
-        # CONTENEDOR DESPLAZABLE DE RESERVACIONES
-        # -------------------------------------------------
         canvas_reservaciones = tk.Canvas(
             marco_reservaciones,
             bg=BLANCO,
@@ -643,23 +566,14 @@ def interfaz_administrador():
             desplazar_reservaciones
         )
 
-        # -------------------------------------------------
-        # RESERVACIÓN SELECCIONADA
-        # -------------------------------------------------
         reserva_abierta = {
             "id": None,
             "frame": None
         }
 
-        def mostrar_detalle_reserva(
-                id_reserva,
-                fecha,
-                hora,
-                cliente,
-                personas,
-                estado,
-                mesa
-        ):
+        def mostrar_detalle_reserva(id_reserva, fecha,
+                hora, cliente, personas, estado,
+                mesa, contenedor_reserva):
 
             if reserva_abierta["id"] == id_reserva:
                 if reserva_abierta["frame"] is not None:
@@ -676,7 +590,7 @@ def interfaz_administrador():
             reserva_abierta["id"] = id_reserva
 
             detalle = tk.Frame(
-                contenedor_reservaciones,
+                contenedor_reserva,
                 bg=CREMA,
                 highlightbackground=BEIGE,
                 highlightthickness=1
@@ -781,9 +695,6 @@ def interfaz_administrador():
 
             actualizar_scroll_reservaciones()
 
-        # -------------------------------------------------
-        # CARGAR PRÓXIMAS RESERVACIONES
-        # -------------------------------------------------
         conexion = conectar()
 
         if conexion:
@@ -794,13 +705,9 @@ def interfaz_administrador():
 
                 cursor.execute(
                     """
-                    SELECT
-                        r.id_reserva,
-                        r.fecha,
-                        r.hora,
+                    SELECT r.id_reserva, r.fecha, r.hora,
                         CONCAT(c.nombre, ' ', c.apellido) AS cliente,
-                        r.cantidad_personas,
-                        r.estado,
+                        r.cantidad_personas, r.estado,
                         m.numero_mesa
                     FROM Reserva r
                     LEFT JOIN Cliente c
@@ -833,8 +740,18 @@ def interfaz_administrador():
                             mesa
                         ) = reserva
 
-                        fila = tk.Frame(
+                        contenedor_reserva =tk.Frame(
                             contenedor_reservaciones,
+                            bg=BLANCO
+                        )
+
+                        contenedor_reserva.pack(
+                            fill="x",
+                            pady=3
+                        )
+
+                        fila = tk.Frame(
+                            contenedor_reserva,
                             bg=CREMA,
                             cursor="hand2"
                         )
@@ -845,9 +762,6 @@ def interfaz_administrador():
                             pady=3
                         )
 
-                        # -------------------------------------------------
-                        # COLOR DEL ESTADO
-                        # -------------------------------------------------
                         if estado == "Confirmada":
                             color_estado = VERDE
                         elif estado == "Pendiente":
@@ -915,15 +829,15 @@ def interfaz_administrador():
                             padx=(5, 0)
                         )
 
-                        def seleccionar_reserva(
-                                event,
+                        def seleccionar_reserva(event,
                                 id_reserva=id_reserva,
                                 fecha=fecha,
                                 hora=hora,
                                 cliente=cliente,
                                 personas=personas,
                                 estado=estado,
-                                mesa=mesa
+                                mesa=mesa,
+                                contenedor_reserva=contenedor_reserva
                         ):
                             mostrar_detalle_reserva(
                                 id_reserva,
@@ -932,7 +846,8 @@ def interfaz_administrador():
                                 cliente,
                                 personas,
                                 estado,
-                                mesa
+                                mesa,
+                                contenedor_reserva
                             )
 
                         fila.bind("<Button-1>", seleccionar_reserva)
@@ -978,9 +893,6 @@ def interfaz_administrador():
 
                 conexion.close()
 
-        # =================================================
-        # ESTADO DE MESAS
-        # =================================================
         marco_mesas = tk.Frame(
             fila_inferior,
             bg=BLANCO,
@@ -1019,9 +931,6 @@ def interfaz_administrador():
             pady=(0, 12)
         )
 
-        # -------------------------------------------------
-        # ÁREA DESPLAZABLE DE MESAS
-        # -------------------------------------------------
         contenedor_principal_mesas = tk.Frame(
             marco_mesas,
             bg=BLANCO
@@ -1109,9 +1018,6 @@ def interfaz_administrador():
             desplazar_mesas_inicio
         )
 
-        # -------------------------------------------------
-        # CARGAR MESAS
-        # -------------------------------------------------
         conexion = conectar()
 
         if conexion:
@@ -1136,9 +1042,6 @@ def interfaz_administrador():
 
                     for indice, (numero, estado) in enumerate(mesas):
 
-                        # -------------------------------------------------
-                        # COLORES IGUALES A RECEPCIONISTA
-                        # -------------------------------------------------
                         if estado == "Disponible":
                             color_estado = VERDE
                         elif estado == "Ocupada":
@@ -1217,12 +1120,8 @@ def interfaz_administrador():
     def mostrar_mesas():
 
         limpiar_vista()
-
+        mostrar_encabezados(False)
         activar_boton("MESAS")
-
-        # =================================================
-        # ENCABEZADO
-        # =================================================
 
         encabezado = tk.Frame(
             vista_actual,
@@ -1241,7 +1140,7 @@ def interfaz_administrador():
             fg=VERDE_OSCURO,
             font=("Georgia", 22, "bold")
         ).pack(
-            side="left"
+            anchor="w",
         )
 
         tk.Label(
@@ -1251,14 +1150,9 @@ def interfaz_administrador():
             fg=GRIS,
             font=("Segoe UI", 9)
         ).pack(
-            side="left",
-            padx=15,
+            anchor="w",
             pady=(8, 0)
         )
-
-        # =================================================
-        # BARRA DE BÚSQUEDA
-        # =================================================
 
         barra_busqueda = tk.Frame(
             vista_actual,
@@ -1298,11 +1192,6 @@ def interfaz_administrador():
             expand=True
         )
 
-
-        # =================================================
-        # CONTENEDOR DE MESAS
-        # =================================================
-
         marco_mesas = tk.Frame(
             vista_actual,
             bg=BLANCO,
@@ -1315,9 +1204,6 @@ def interfaz_administrador():
             expand=True
         )
 
-        # =================================================
-        # ÁREA DESPLAZABLE
-        # =================================================
         canvas_mesas = tk.Canvas(
             marco_mesas,
             bg=BLANCO,
@@ -1356,10 +1242,6 @@ def interfaz_administrador():
             desplazar_mesas
         )
 
-        # =================================================
-        # CONTENEDOR INTERNO
-        # =================================================
-
         contenedor_mesas = tk.Frame(
             canvas_mesas,
             bg=BLANCO
@@ -1370,10 +1252,6 @@ def interfaz_administrador():
             window=contenedor_mesas,
             anchor="nw"
         )
-
-        # =================================================
-        # AJUSTAR EL ÁREA DEL SCROLL
-        # =================================================
 
         def actualizar_scroll(event=None):
 
@@ -1386,10 +1264,6 @@ def interfaz_administrador():
             actualizar_scroll
         )
 
-        # =================================================
-        # HACER QUE EL CONTENEDOR OCUPETODO EL ANCHO
-        # =================================================
-
         def ajustar_ancho(event):
 
             canvas_mesas.itemconfig(
@@ -1401,9 +1275,6 @@ def interfaz_administrador():
             "<Configure>",
             ajustar_ancho
         )
-        # =================================================
-        # CARGAR MESAS
-        # =================================================
 
         def cargar_mesas():
 
@@ -1475,10 +1346,6 @@ def interfaz_administrador():
 
                     return
 
-                # -------------------------------------------------
-                # CREAR TARJETAS
-                # -------------------------------------------------
-
                 for indice, mesa in enumerate(mesas):
 
                     id_mesa = mesa[0]
@@ -1486,10 +1353,6 @@ def interfaz_administrador():
                     capacidad = mesa[2]
                     zona = mesa[3]
                     estado = mesa[4]
-
-                    # -------------------------------------------------
-                    # COLOR SEGÚN ESTADO
-                    # -------------------------------------------------
 
                     if estado == "Disponible":
 
@@ -1502,10 +1365,6 @@ def interfaz_administrador():
                     else:
 
                         color_estado = BEIGE
-
-                    # -------------------------------------------------
-                    # TARJETA
-                    # -------------------------------------------------
 
                     tarjeta = tk.Frame(
                         contenedor_mesas,
@@ -1526,10 +1385,6 @@ def interfaz_administrador():
 
                     tarjeta.grid_propagate(False)
 
-                    # -------------------------------------------------
-                    # NÚMERO DE MESA
-                    # -------------------------------------------------
-
                     tk.Label(
                         tarjeta,
                         text=f"MESA {numero}",
@@ -1540,10 +1395,6 @@ def interfaz_administrador():
                         pady=(15, 3)
                     )
 
-                    # -------------------------------------------------
-                    # CAPACIDAD
-                    # -------------------------------------------------
-
                     tk.Label(
                         tarjeta,
                         text=f"Capacidad: {capacidad} personas",
@@ -1551,10 +1402,6 @@ def interfaz_administrador():
                         fg=GRIS,
                         font=("Segoe UI", 9)
                     ).pack()
-
-                    # -------------------------------------------------
-                    # ZONA
-                    # -------------------------------------------------
 
                     tk.Label(
                         tarjeta,
@@ -1566,10 +1413,6 @@ def interfaz_administrador():
                         pady=(3, 5)
                     )
 
-                    # -------------------------------------------------
-                    # ESTADO
-                    # -------------------------------------------------
-
                     tk.Label(
                         tarjeta,
                         text=f"● {estado.upper()}",
@@ -1577,8 +1420,6 @@ def interfaz_administrador():
                         fg=color_estado,
                         font=("Segoe UI", 9, "bold")
                     ).pack()
-
-                    # PERMITIR SELECCIONAR LA TARJETA
 
                     tarjeta.bind(
                         "<Button-1>",
@@ -1590,12 +1431,6 @@ def interfaz_administrador():
                             "<Button-1>",
                             lambda event, datos=mesa, marco=tarjeta: seleccionar_mesa(datos, marco)
                         )
-
-
-
-                # -------------------------------------------------
-                # HACER LAS COLUMNAS UNIFORMES
-                # -------------------------------------------------
 
                 for columna in range(4):
                     contenedor_mesas.grid_columnconfigure(
@@ -1619,10 +1454,6 @@ def interfaz_administrador():
 
                 conexion.close()
 
-        # =================================================
-        # FORMULARIO DE MESA
-        # =================================================
-
         def abrir_formulario_mesa(mesa=None):
 
             formulario = tk.Toplevel(
@@ -1636,7 +1467,7 @@ def interfaz_administrador():
             )
 
             formulario.geometry(
-                "420x400"
+                "420x450"
             )
 
             formulario.configure(
@@ -1663,10 +1494,6 @@ def interfaz_administrador():
             )
 
             formulario.grab_set()
-
-            # -------------------------------------------------
-            # TÍTULO
-            # -------------------------------------------------
 
             tk.Label(
                 formulario,
@@ -1702,10 +1529,6 @@ def interfaz_administrador():
                 fill="x"
             )
 
-            # -------------------------------------------------
-            # NÚMERO
-            # -------------------------------------------------
-
             tk.Label(
                 campos,
                 text="Número de mesa",
@@ -1731,10 +1554,6 @@ def interfaz_administrador():
                 ipady=6,
                 pady=(3, 10)
             )
-
-            # -------------------------------------------------
-            # CAPACIDAD
-            # -------------------------------------------------
 
             tk.Label(
                 campos,
@@ -1762,10 +1581,6 @@ def interfaz_administrador():
                 pady=(3, 10)
             )
 
-            # -------------------------------------------------
-            # ZONA
-            # -------------------------------------------------
-
             tk.Label(
                 campos,
                 text="Zona",
@@ -1791,10 +1606,6 @@ def interfaz_administrador():
                 fill="x",
                 pady=(3, 10)
             )
-
-            # -------------------------------------------------
-            # ESTADO
-            # -------------------------------------------------
 
             tk.Label(
                 campos,
@@ -1822,10 +1633,6 @@ def interfaz_administrador():
                 pady=(3, 10)
             )
 
-            # -------------------------------------------------
-            # DATOS DE EDICIÓN
-            # -------------------------------------------------
-
             if mesa:
 
                 entrada_numero.insert(
@@ -1851,10 +1658,6 @@ def interfaz_administrador():
                 estado.set(
                     "Disponible"
                 )
-
-            # -------------------------------------------------
-            # GUARDAR
-            # -------------------------------------------------
 
             def guardar_mesa():
 
@@ -1907,30 +1710,15 @@ def interfaz_administrador():
                         cursor.execute(
                             """
                             INSERT INTO Mesa
-                            (
-                                numero_mesa,
-                                capacidad,
-                                zona,
-                                estado
-                            )
-                            VALUES
-                            (
-                                %s,
-                                %s,
-                                %s,
-                                %s
-                            )
+                            (numero_mesa, capacidad,
+                                zona, estado)
+                            VALUES(%s, %s, %s, %s)
                             """,
-                            (
-                                numero,
-                                capacidad,
-                                zona_valor,
-                                estado_valor
-                            )
+                            (numero, capacidad,
+                                zona_valor, estado_valor)
                         )
 
                         mensaje = "Mesa registrada correctamente."
-
 
                     else:
 
@@ -1938,34 +1726,24 @@ def interfaz_administrador():
                             """
                             UPDATE Mesa
                             SET
-                                numero_mesa = %s,
-                                capacidad = %s,
-                                zona = %s,
-                                estado = %s
+                                numero_mesa = %s, capacidad = %s,
+                                zona = %s, estado = %s
                             WHERE id_mesa = %s
                             """,
-                            (
-                                numero,
-                                capacidad,
-                                zona_valor,
-                                estado_valor,
-                                mesa[0]
-                            )
+                            (numero, capacidad, zona_valor,
+                                estado_valor, mesa[0])
                         )
 
                         mensaje = "Mesa actualizada correctamente."
 
                     conexion.commit()
-
                     formulario.destroy()
-
                     cargar_mesas()
 
                     messagebox.showinfo(
                         "Operación realizada",
                         mensaje
                     )
-
 
                 except mysql.connector.Error as error:
 
@@ -1977,17 +1755,12 @@ def interfaz_administrador():
                         parent=formulario
                     )
 
-
                 finally:
 
                     if cursor:
                         cursor.close()
 
                     conexion.close()
-
-            # -------------------------------------------------
-            # BOTONES
-            # -------------------------------------------------
 
             tk.Button(
                 formulario,
@@ -2029,20 +1802,10 @@ def interfaz_administrador():
                 pady=15
             )
 
-        # =================================================
-        # OBTENER MESA SELECCIONADA
-        # =================================================
-
         mesa_seleccionada = [None]
 
-        # =================================================
-        # SELECCIONAR MESA
-        # =================================================
-
         def seleccionar_mesa(mesa, tarjeta):
-
             mesa_seleccionada[0] = mesa
-
             for widget in contenedor_mesas.winfo_children():
 
                 if isinstance(widget, tk.Frame):
@@ -2055,10 +1818,6 @@ def interfaz_administrador():
                 highlightbackground=BEIGE,
                 highlightthickness=2
             )
-
-        # =================================================
-        # EDITAR MESA
-        # =================================================
 
         def editar_mesa():
 
@@ -2074,10 +1833,6 @@ def interfaz_administrador():
                 mesa_seleccionada[0]
             )
 
-        # =================================================
-        # ELIMINAR MESA
-        # =================================================
-
         def eliminar_mesa():
 
             if mesa_seleccionada[0] is None:
@@ -2085,7 +1840,6 @@ def interfaz_administrador():
                     "Seleccionar mesa",
                     "Selecciona una mesa para eliminar."
                 )
-
                 return
 
             mesa = mesa_seleccionada[0]
@@ -2106,9 +1860,7 @@ def interfaz_administrador():
             cursor = None
 
             try:
-
                 cursor = conexion.cursor()
-
                 cursor.execute(
                     """
                     DELETE FROM Mesa
@@ -2118,9 +1870,7 @@ def interfaz_administrador():
                 )
 
                 conexion.commit()
-
                 mesa_seleccionada[0] = None
-
                 cargar_mesas()
 
                 messagebox.showinfo(
@@ -2131,7 +1881,6 @@ def interfaz_administrador():
             except mysql.connector.Error:
 
                 conexion.rollback()
-
                 messagebox.showerror(
                     "No se puede eliminar",
                     "No se puede eliminar esta mesa porque tiene "
@@ -2145,10 +1894,6 @@ def interfaz_administrador():
 
                 conexion.close()
 
-        # =================================================
-        # BOTONES DE ACCIONES
-        # =================================================
-
         barra_botones = tk.Frame(
             vista_actual,
             bg=CREMA
@@ -2158,11 +1903,6 @@ def interfaz_administrador():
             fill="x",
             pady=(12, 0)
         )
-
-
-        # -------------------------------------------------
-        # NUEVA MESA
-        # -------------------------------------------------
 
         tk.Button(
             barra_botones,
@@ -2181,11 +1921,6 @@ def interfaz_administrador():
         ).pack(
             side="left"
         )
-
-
-        # -------------------------------------------------
-        # EDITAR
-        # -------------------------------------------------
 
         tk.Button(
             barra_botones,
@@ -2206,11 +1941,6 @@ def interfaz_administrador():
             padx=8
         )
 
-
-        # -------------------------------------------------
-        # ELIMINAR
-        # -------------------------------------------------
-
         tk.Button(
             barra_botones,
             text="Eliminar",
@@ -2229,30 +1959,17 @@ def interfaz_administrador():
             side="left"
         )
 
-        # BÚSQUEDA
         entrada_busqueda.bind(
             "<KeyRelease>",
             lambda event: cargar_mesas()
         )
-
-        # CARGAR MESAS
         cargar_mesas()
-
-    # =====================================================
-    # VISTAS PENDIENTES
-    # =====================================================
-    # =====================================================
-    # VISTA DE INVENTARIO
-    # =====================================================
 
     def mostrar_inventario():
 
         limpiar_vista()
+        mostrar_encabezados(False)
         activar_boton("INVENTARIO")
-
-        # =================================================
-        # ENCABEZADO
-        # =================================================
 
         encabezado = tk.Frame(vista_actual, bg=CREMA)
         encabezado.pack(fill="x", pady=(8, 5))
@@ -2272,10 +1989,6 @@ def interfaz_administrador():
             fg=GRIS,
             font=("Segoe UI", 9)
         ).pack(anchor="w", pady=(4, 0))
-
-        # =================================================
-        # TARJETAS DE RESUMEN
-        # =================================================
 
         marco_resumen = tk.Frame(vista_actual, bg=CREMA)
         marco_resumen.pack(fill="x", pady=(18, 15))
@@ -2348,10 +2061,6 @@ def interfaz_administrador():
             VINO
         )
 
-        # =================================================
-        # BÚSQUEDA Y FILTROS
-        # =================================================
-
         barra_busqueda = tk.Frame(vista_actual, bg=CREMA)
         barra_busqueda.pack(fill="x", pady=(3, 12))
 
@@ -2416,16 +2125,8 @@ def interfaz_administrador():
         filtro_estado.set("Todos")
         filtro_estado.pack(side="left")
 
-        # =================================================
-        # BARRA DE ACCIONES
-        # =================================================
-
         barra_acciones = tk.Frame(vista_actual, bg=CREMA)
         barra_acciones.pack(fill="x", pady=(0, 12))
-
-        # =================================================
-        # ÁREA DE INVENTARIO
-        # =================================================
 
         contenedor_inventario = tk.Frame(
             vista_actual,
@@ -2461,7 +2162,6 @@ def interfaz_administrador():
                 width=ancho
             ).pack(side="left", padx=8, pady=11)
 
-        # Área desplazable para las filas.
         area_filas = tk.Frame(contenedor_inventario, bg=BLANCO)
         area_filas.pack(fill="both", expand=True)
 
@@ -2507,30 +2207,23 @@ def interfaz_administrador():
 
         ingredientes = []
 
-        # =================================================
-        # CONEXIÓN Y CONSULTA DE INGREDIENTES
-        # =================================================
-
         def obtener_ingredientes():
-
             conexion = None
             cursor = None
 
             try:
                 conexion = conectar()
+
+                if conexion is None:
+                    return []
+
                 cursor = conexion.cursor(dictionary=True)
 
                 cursor.execute("""
-                    SELECT
-                        id_ingrediente,
-                        nombre,
-                        categoria,
-                        cantidad_actual,
-                        unidad_medida,
-                        stock_minimo,
-                        costo_unitario,
-                        id_proveedor,
-                        activo
+                    SELECT id_ingrediente, nombre, categoria,
+                           cantidad_actual, unidad_medida,
+                           stock_minimo, costo_unitario,
+                           id_proveedor, activo
                     FROM ingrediente
                     WHERE activo = 1
                     ORDER BY nombre ASC
@@ -2538,7 +2231,7 @@ def interfaz_administrador():
 
                 return cursor.fetchall()
 
-            except Exception as error:
+            except mysql.connector.Error as error:
                 messagebox.showerror(
                     "Error de inventario",
                     f"No se pudieron consultar los ingredientes.\n\n{error}"
@@ -2564,10 +2257,6 @@ def interfaz_administrador():
                 return "Stock bajo"
 
             return "Disponible"
-
-        # =================================================
-        # MOSTRAR FILAS Y APLICAR FILTROS
-        # =================================================
 
         def actualizar_tabla(*args):
 
@@ -2636,7 +2325,6 @@ def interfaz_administrador():
                     )
                     etiqueta.pack(side="left", padx=8, pady=12)
 
-                    # Permite abrir la edición con doble clic.
                     etiqueta.bind(
                         "<Double-Button-1>",
                         lambda evento, item=ingrediente: abrir_formulario(item)
@@ -2712,10 +2400,6 @@ def interfaz_administrador():
 
             actualizar_tabla()
 
-        # =================================================
-        # REGISTRAR Y EDITAR INGREDIENTES
-        # =================================================
-
         def abrir_formulario(ingrediente=None):
 
             ventana = tk.Toplevel(vista_actual)
@@ -2727,6 +2411,7 @@ def interfaz_administrador():
             ventana.resizable(False, False)
             ventana.transient(vista_actual.winfo_toplevel())
             ventana.grab_set()
+            ventana.iconbitmap("vivaldi.ico")
 
             tk.Label(
                 ventana,
@@ -2816,15 +2501,14 @@ def interfaz_administrador():
 
                 try:
                     conexion = conectar()
+
+                    if conexion is None:
+                        return
+
                     cursor = conexion.cursor()
 
-                    datos = (
-                        nombre,
-                        categoria,
-                        cantidad,
-                        unidad,
-                        minimo,
-                        costo
+                    datos = (nombre, categoria, cantidad,
+                        unidad, minimo, costo
                     )
 
                     if ingrediente:
@@ -2899,10 +2583,6 @@ def interfaz_administrador():
                 pady=9
             ).pack(fill="x", padx=25, pady=20)
 
-        # =================================================
-        # BOTONES FUNCIONALES
-        # =================================================
-
         tk.Button(
             barra_acciones,
             text="+ Nuevo producto",
@@ -2935,27 +2615,16 @@ def interfaz_administrador():
             pady=9
         ).pack(side="left", padx=8)
 
-        # Eventos de búsqueda y filtros.
         entrada_busqueda.bind("<KeyRelease>", actualizar_tabla)
         filtro_categoria.bind("<<ComboboxSelected>>", actualizar_tabla)
         filtro_estado.bind("<<ComboboxSelected>>", actualizar_tabla)
 
-        # Cargar ingredientes desde MySQL al abrir Inventario.
         cargar_inventario()
-
-
-    # =====================================================
-    # VISTA DE PROVEEDORES
-    # =====================================================
-
 
     def mostrar_proveedores():
         limpiar_vista()
+        mostrar_encabezados(False)
         activar_boton("PROVEEDORES")
-
-        # -------------------------------------------------
-        # ENCABEZADO
-        # -------------------------------------------------
 
         encabezado = tk.Frame(vista_actual, bg=CREMA)
         encabezado.pack(fill="x", pady=(8, 12))
@@ -2975,10 +2644,6 @@ def interfaz_administrador():
             fg=GRIS,
             font=("Segoe UI", 9)
         ).pack(anchor="w", pady=(4, 0))
-
-        # -------------------------------------------------
-        # RESUMEN
-        # -------------------------------------------------
 
         marco_resumen = tk.Frame(vista_actual, bg=CREMA)
         marco_resumen.pack(fill="x", pady=(5, 15))
@@ -3029,10 +2694,6 @@ def interfaz_administrador():
             marco_resumen, "INACTIVOS", VINO
         )
 
-        # -------------------------------------------------
-        # BÚSQUEDA Y FILTRO
-        # -------------------------------------------------
-
         barra_busqueda = tk.Frame(vista_actual, bg=CREMA)
         barra_busqueda.pack(fill="x", pady=(0, 10))
 
@@ -3081,21 +2742,12 @@ def interfaz_administrador():
         filtro_estado.set("Activos")
         filtro_estado.pack(side="left")
 
-        # -------------------------------------------------
-        # BARRA DE ACCIONES
-        # Se crea antes de la tabla para reservar su espacio.
-        # -------------------------------------------------
-
         barra_acciones = tk.Frame(vista_actual, bg=CREMA)
         barra_acciones.pack(
             side="top",
             fill="x",
             pady=(0, 10)
         )
-
-        # -------------------------------------------------
-        # TABLA
-        # -------------------------------------------------
 
         marco_tabla = tk.Frame(
             vista_actual,
@@ -3175,10 +2827,6 @@ def interfaz_administrador():
 
         tabla.tag_configure("inactivo", foreground=VINO)
 
-        # -------------------------------------------------
-        # ACTUALIZAR CONTADORES
-        # -------------------------------------------------
-
         def actualizar_resumen():
             conexion = conectar()
 
@@ -3222,10 +2870,6 @@ def interfaz_administrador():
                     cursor.close()
 
                 conexion.close()
-
-        # -------------------------------------------------
-        # CARGAR PROVEEDORES
-        # -------------------------------------------------
 
         def cargar_proveedores():
             for elemento in tabla.get_children():
@@ -3327,10 +2971,6 @@ def interfaz_administrador():
 
             actualizar_resumen()
 
-        # -------------------------------------------------
-        # FORMULARIO PARA REGISTRAR O EDITAR
-        # -------------------------------------------------
-
         def abrir_formulario(proveedor=None):
             formulario = tk.Toplevel(ventana)
             es_edicion = proveedor is not None
@@ -3403,10 +3043,6 @@ def interfaz_administrador():
                 entrada_correo.insert(0, proveedor[3] or "")
                 entrada_direccion.insert(0, proveedor[4] or "")
 
-            # ---------------------------------------------
-            # GUARDAR PROVEEDOR
-            # ---------------------------------------------
-
             def guardar_proveedor():
                 nombre = entrada_nombre.get().strip()
                 telefono = entrada_telefono.get().strip()
@@ -3447,11 +3083,8 @@ def interfaz_administrador():
                     if es_edicion:
                         cursor.execute("""
                             UPDATE proveedor
-                            SET
-                                nombre = %s,
-                                telefono = %s,
-                                correo = %s,
-                                direccion = %s
+                            SET nombre = %s, telefono = %s,
+                                correo = %s, direccion = %s
                             WHERE id_proveedor = %s
                         """, (
                             nombre,
@@ -3508,10 +3141,6 @@ def interfaz_administrador():
 
                     conexion.close()
 
-            # ---------------------------------------------
-            # BOTONES DEL FORMULARIO
-            # ---------------------------------------------
-
             marco_botones = tk.Frame(formulario, bg=CREMA)
             marco_botones.pack(pady=20)
 
@@ -3547,10 +3176,6 @@ def interfaz_administrador():
                 cursor="hand2"
             ).pack(side="left", padx=5)
 
-        # -------------------------------------------------
-        # OBTENER PROVEEDOR SELECCIONADO
-        # -------------------------------------------------
-
         def obtener_proveedor_seleccionado():
             seleccion = tabla.selection()
 
@@ -3564,10 +3189,6 @@ def interfaz_administrador():
 
             valores = tabla.item(seleccion[0], "values")
             return valores
-
-        # -------------------------------------------------
-        # EDITAR PROVEEDOR
-        # -------------------------------------------------
 
         def editar_proveedor():
             proveedor = obtener_proveedor_seleccionado()
@@ -3584,10 +3205,6 @@ def interfaz_administrador():
                 return
 
             abrir_formulario(proveedor)
-
-        # -------------------------------------------------
-        # ELIMINAR PROVEEDOR
-        # -------------------------------------------------
 
         def eliminar_proveedor():
             proveedor = obtener_proveedor_seleccionado()
@@ -3647,10 +3264,6 @@ def interfaz_administrador():
                     cursor.close()
 
                 conexion.close()
-
-        # -------------------------------------------------
-        # ACTIVAR O DESACTIVAR PROVEEDOR
-        # -------------------------------------------------
 
         def cambiar_estado_proveedor():
             proveedor = obtener_proveedor_seleccionado()
@@ -3721,10 +3334,6 @@ def interfaz_administrador():
 
                 conexion.close()
 
-        # -------------------------------------------------
-        # BOTONES DE ACCIÓN
-        # -------------------------------------------------
-
         tk.Button(
             barra_acciones,
             text="+ Nuevo proveedor",
@@ -3773,10 +3382,6 @@ def interfaz_administrador():
             cursor="hand2"
         ).pack(side="left")
 
-        # -------------------------------------------------
-        # EVENTOS DE BÚSQUEDA Y FILTRO
-        # -------------------------------------------------
-
         entrada_busqueda.bind(
             "<KeyRelease>",
             lambda evento: cargar_proveedores()
@@ -3787,20 +3392,9 @@ def interfaz_administrador():
             lambda evento: cargar_proveedores()
         )
 
-        # -------------------------------------------------
-        # CARGA INICIAL
-        # -------------------------------------------------
-
         actualizar_resumen()
         cargar_proveedores()
 
-
-
-
-
-    # =====================================================
-    # VISTA TEMPORAL
-    # =====================================================
 
     def vista_pendiente(nombre):
 
@@ -3829,20 +3423,12 @@ def interfaz_administrador():
         )
 
 
-
-    # =====================================================
-    # VISTA DE MENÚ
-    # =====================================================
-
-
     def mostrar_menu():
-        import os
-        import shutil
-        import uuid
         from tkinter import filedialog
         from PIL import Image, ImageTk
 
         limpiar_vista()
+        mostrar_encabezados(False)
         activar_boton("MENÚ")
 
         CARPETA_BASE = os.path.dirname(os.path.abspath(__file__))
@@ -3859,10 +3445,6 @@ def interfaz_administrador():
         imagenes_cache = []
         platillos = []
 
-        # =====================================================
-        # ENCABEZADO
-        # =====================================================
-
         encabezado = tk.Frame(vista_actual, bg=CREMA)
         encabezado.pack(fill="x", pady=(8, 5))
 
@@ -3872,7 +3454,7 @@ def interfaz_administrador():
             bg=CREMA,
             fg=VERDE_OSCURO,
             font=("Georgia", 23, "bold")
-        ).pack(side="left")
+        ).pack(anchor="w")
 
         tk.Label(
             encabezado,
@@ -3880,11 +3462,7 @@ def interfaz_administrador():
             bg=CREMA,
             fg=GRIS,
             font=("Segoe UI", 9)
-        ).pack(side="left", padx=15, pady=(8, 0))
-
-        # =====================================================
-        # BÚSQUEDA Y FILTRO
-        # =====================================================
+        ).pack(side="left", pady=(8, 0))
 
         barra_busqueda = tk.Frame(vista_actual, bg=CREMA)
         barra_busqueda.pack(fill="x", pady=(12, 12))
@@ -3935,10 +3513,6 @@ def interfaz_administrador():
         filtro_disponibilidad.set("Todos")
         filtro_disponibilidad.pack(side="left")
 
-        # =====================================================
-        # BOTONES PRINCIPALES
-        # =====================================================
-
         barra_acciones = tk.Frame(vista_actual, bg=CREMA)
         barra_acciones.pack(fill="x", pady=(0, 12))
 
@@ -3973,10 +3547,6 @@ def interfaz_administrador():
             padx=16,
             pady=9
         ).pack(side="left", padx=8)
-
-        # =====================================================
-        # CONTENEDOR DESPLAZABLE
-        # =====================================================
 
         marco_principal = tk.Frame(
             vista_actual,
@@ -4035,10 +3605,6 @@ def interfaz_administrador():
             for hijo in widget.winfo_children():
                 activar_scroll_recursivo(hijo)
 
-        # =====================================================
-        # CARGAR PLATILLOS DESDE MYSQL
-        # =====================================================
-
         def cargar_platillos():
             nonlocal platillos
 
@@ -4096,10 +3662,6 @@ def interfaz_administrador():
                     conexion.close()
 
             renderizar_menu()
-
-        # =====================================================
-        # FORMULARIO PARA AGREGAR Y EDITAR
-        # =====================================================
 
         def abrir_formulario(platillo=None):
             es_edicion = platillo is not None
@@ -4349,7 +3911,6 @@ def interfaz_administrador():
                 state="readonly"
             ).pack(fill="x", padx=16, ipady=4)
 
-            # Selección manual de fotografía
             ruta_imagen = {
                 "ruta": platillo.get("imagen_url") or ""
                 if es_edicion else ""
@@ -4442,10 +4003,6 @@ def interfaz_administrador():
                 pady=7
             ).pack(anchor="w", padx=16, pady=(6, 14))
 
-            # =================================================
-            # GUARDAR EN MYSQL
-            # =================================================
-
             def guardar_platillo():
                 nombre = nombre_var.get().strip()
                 descripcion = descripcion_var.get("1.0", "end").strip()
@@ -4483,8 +4040,6 @@ def interfaz_administrador():
                 imagen_seleccionada = ruta_imagen["ruta"]
 
                 if imagen_seleccionada:
-                    # Si se eligió una fotografía nueva, se copia
-                    # a la carpeta local del proyecto.
                     es_imagen_local = (
                         os.path.isabs(imagen_seleccionada)
                         and os.path.dirname(imagen_seleccionada)
@@ -4666,10 +4221,6 @@ def interfaz_administrador():
                 pady=9
             ).pack(side="left", padx=8)
 
-        # =====================================================
-        # ELIMINAR PLATILLO
-        # =====================================================
-
         def eliminar_platillo(platillo):
             confirmar = messagebox.askyesno(
                 "Confirmar eliminación",
@@ -4720,18 +4271,12 @@ def interfaz_administrador():
                 if conexion is not None:
                     conexion.close()
 
-        # =====================================================
-        # DIBUJAR LAS TARJETAS
-        # =====================================================
-
         def renderizar_menu(*args):
-            # Limpiar las tarjetas anteriores.
             for widget in contenedor_tarjetas.winfo_children():
                 widget.destroy()
 
             imagenes_cache.clear()
 
-            # Obtener los filtros actuales.
             texto = busqueda.get().strip().lower()
             disponibilidad_filtro = filtro_disponibilidad.get()
 
@@ -4758,7 +4303,6 @@ def interfaz_administrador():
                 if coincide_texto and coincide_estado:
                     resultados.append(p)
 
-            # Mensaje cuando no hay resultados.
             if not resultados:
                 tk.Label(
                     contenedor_tarjetas,
@@ -4779,7 +4323,6 @@ def interfaz_administrador():
                 canvas.after_idle(actualizar_scroll)
                 return
 
-            # Organizar las tarjetas en dos columnas.
             for columna in range(2):
                 contenedor_tarjetas.grid_columnconfigure(
                     columna,
@@ -4787,7 +4330,6 @@ def interfaz_administrador():
                     uniform="columna_platillos"
                 )
 
-            # Orden visual por categorías.
             categorias_menu = [
                 "Antipasti",
                 "Primi",
@@ -4821,7 +4363,6 @@ def interfaz_administrador():
                 else:
                     otras_categorias.append(p)
 
-            # Mostrar cada categoría y sus tarjetas.
             fila_actual = 0
 
             for categoria in categorias_menu:
@@ -4830,7 +4371,6 @@ def interfaz_administrador():
                 if not lista:
                     continue
 
-                # Encabezado de categoría.
                 encabezado = tk.Frame(
                     contenedor_tarjetas,
                     bg=CREMA_CLARO
@@ -4867,7 +4407,6 @@ def interfaz_administrador():
 
                 fila_actual += 1
 
-                # Contenedor de las tarjetas de esta categoría.
                 contenedor_categoria = tk.Frame(
                     contenedor_tarjetas,
                     bg=CREMA_CLARO
@@ -4896,7 +4435,6 @@ def interfaz_administrador():
                     fila = indice // 2
                     columna = indice % 2
 
-                    # Tarjeta principal.
                     tarjeta = tk.Frame(
                         contenedor_categoria,
                         bg=BLANCO,
@@ -4912,7 +4450,6 @@ def interfaz_administrador():
                         pady=5
                     )
 
-                    # Franja decorativa superior.
                     tk.Frame(
                         tarjeta,
                         bg=VERDE,
@@ -4931,7 +4468,6 @@ def interfaz_administrador():
                         pady=9
                     )
 
-                    # Distribución horizontal: fotografía + información.
                     cuerpo = tk.Frame(
                         contenido,
                         bg=BLANCO
@@ -4942,7 +4478,6 @@ def interfaz_administrador():
                         expand=True
                     )
 
-                    # Fotografía del platillo.
                     marco_imagen = tk.Frame(
                         cuerpo,
                         bg=CREMA_CLARO,
@@ -5009,7 +4544,6 @@ def interfaz_administrador():
                             fill="both"
                         )
 
-                    # Información del platillo.
                     info = tk.Frame(
                         cuerpo,
                         bg=BLANCO
@@ -5051,7 +4585,6 @@ def interfaz_administrador():
                         pady=(4, 5)
                     )
 
-                    # Características alimentarias y distintivos.
                     etiquetas = []
 
                     if platillo.get("vegetariano"):
@@ -5080,7 +4613,6 @@ def interfaz_administrador():
                             pady=(0, 4)
                         )
 
-                    # Precio.
                     try:
                         texto_precio = (
                             f"${float(platillo['precio']):.2f}"
@@ -5100,7 +4632,6 @@ def interfaz_administrador():
                         pady=(2, 4)
                     )
 
-                    # Estado de disponibilidad.
                     disponible = (
                             str(
                                 platillo.get("disponibilidad") or ""
@@ -5118,7 +4649,6 @@ def interfaz_administrador():
                         anchor="w"
                     ).pack(fill="x")
 
-                    # Botones administrativos.
                     botones = tk.Frame(
                         contenido,
                         bg=BLANCO
@@ -5174,7 +4704,6 @@ def interfaz_administrador():
 
                 fila_actual += 1
 
-            # Mostrar categorías adicionales si existieran en la base.
             if otras_categorias:
                 encabezado = tk.Frame(
                     contenedor_tarjetas,
@@ -5224,8 +4753,6 @@ def interfaz_administrador():
                     uniform="otras_categorias"
                 )
 
-                # Incluir las categorías adicionales en la misma distribución.
-                # Se reutiliza la categoría principal para mantener el diseño.
                 for indice, platillo in enumerate(otras_categorias):
                     fila = indice // 2
                     columna = indice % 2
@@ -5327,7 +4854,6 @@ def interfaz_administrador():
 
             canvas.after_idle(actualizar_scroll)
 
-        # Actualizar tarjetas al escribir o cambiar el filtro
         busqueda.trace_add("write", renderizar_menu)
 
         filtro_disponibilidad.bind(
@@ -5335,26 +4861,373 @@ def interfaz_administrador():
             renderizar_menu
         )
 
-        # Mostrar los datos al entrar en la vista
         cargar_platillos()
 
+    def obtener_datos_reportes(periodo="Hoy"):
+        conexion = conectar()
 
-    # =====================================================
-    # VISTA DE REPORTES
-    # =====================================================
+        if not conexion:
+            return {
+                "ingresos": 0,
+                "ventas": 0,
+                "facturas": []
+            }
 
-    def mostrar_reportes():
+        cursor = None
+
+        try:
+            cursor = conexion.cursor()
+
+            filtros = {
+                "Hoy": "DATE(f.fecha) = CURDATE()",
+                "Esta semana": (
+                    "YEARWEEK(f.fecha, 1) = YEARWEEK(CURDATE(), 1)"
+                ),
+                "Este mes": (
+                    "YEAR(f.fecha) = YEAR(CURDATE()) "
+                    "AND MONTH(f.fecha) = MONTH(CURDATE())"
+                ),
+                "Este año": "YEAR(f.fecha) = YEAR(CURDATE())"
+            }
+
+            condicion = filtros.get(periodo, filtros["Hoy"])
+
+            cursor.execute(
+                f"""
+                SELECT
+                    f.id_factura,
+                    f.fecha,
+                    f.total,
+                    f.metodo_pago,
+                    CONCAT(e.nombre, ' ', e.apellido) AS nombre_mesero
+                FROM Factura AS f
+                LEFT JOIN Orden AS o
+                    ON f.id_orden = o.id_orden
+                LEFT JOIN Empleado AS e
+                    ON o.id_empleado = e.id_empleado
+                WHERE f.estado_pago = 'Pagado'
+                  AND {condicion}
+                ORDER BY f.fecha DESC, f.id_factura DESC
+                """
+            )
+
+            facturas = cursor.fetchall()
+
+            ingresos = sum(float(f[2] or 0) for f in facturas)
+
+            return {
+                "ingresos": ingresos,
+                "ventas": len(facturas),
+                "facturas": facturas
+            }
+
+        except Exception as error:
+            print("Error al obtener los reportes:", error)
+            return {
+                "ingresos": 0,
+                "ventas": 0,
+                "facturas": []
+            }
+
+        finally:
+            if cursor:
+                cursor.close()
+            conexion.close()
+
+    def exportar_reporte_pdf(periodo_seleccionado):
+        datos = obtener_datos_reportes(periodo_seleccionado)
+        facturas = datos["facturas"]
+
+        if not facturas:
+            messagebox.showinfo(
+                "Sin datos",
+                "No hay facturas pagadas para exportar en este período."
+            )
+            return
+
+        ruta = filedialog.asksaveasfilename(
+            title="Guardar reporte PDF",
+            defaultextension=".pdf",
+            filetypes=[("Archivo PDF", "*.pdf")],
+            initialfile=f"reporte_ventas_{periodo_seleccionado.lower().replace(' ', '_')}.pdf"
+        )
+
+        if not ruta:
+            return
+
+        try:
+            documento = SimpleDocTemplate(
+                ruta,
+                pagesize=landscape(letter),
+                rightMargin=30,
+                leftMargin=30,
+                topMargin=30,
+                bottomMargin=30
+            )
+
+            estilos = getSampleStyleSheet()
+            elementos = [
+                Paragraph(
+                    "Restaurante Vivaldi",
+                    estilos["Title"]
+                ),
+                Paragraph(
+                    f"Reporte de ventas cobradas: {periodo_seleccionado}",
+                    estilos["Heading2"]
+                ),
+                Spacer(1, 15)
+            ]
+
+            tabla_datos = [
+                ["N.º Factura", "Fecha", "Total", "Método de pago", "Mesero"]
+            ]
+
+            for factura in facturas:
+                fecha = (
+                    factura[1].strftime("%d/%m/%Y")
+                    if hasattr(factura[1], "strftime")
+                    else str(factura[1])
+                )
+
+                tabla_datos.append([
+                    str(factura[0]),
+                    fecha,
+                    f"${float(factura[2] or 0):,.2f}",
+                    str(factura[3] or "No especificado"),
+                    str(factura[4] or "No asignado")
+                ])
+
+            tabla_datos.append([
+                "",
+                "TOTAL COBRADO",
+                f"${datos['ingresos']:,.2f}",
+                ""
+            ])
+
+            tabla = Table(
+                tabla_datos,
+                repeatRows=1,
+                colWidths=[85, 110, 105, 150, 180]
+            )
+
+            tabla.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#223D2D")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#D9BC8C")),
+                ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#D9BC8C")),
+                ("ALIGN", (2, 1), (2, -1), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8)
+            ]))
+
+            elementos.append(tabla)
+            documento.build(elementos)
+
+            messagebox.showinfo(
+                "Reporte generado",
+                "El reporte PDF se guardó correctamente."
+            )
+
+        except Exception as error:
+            messagebox.showerror(
+                "Error al exportar PDF",
+                f"No se pudo generar el reporte:\n{error}"
+            )
+
+    def exportar_reporte_excel(periodo_seleccionado):
+        datos = obtener_datos_reportes(periodo_seleccionado)
+        facturas = datos["facturas"]
+
+        if not facturas:
+            messagebox.showinfo(
+                "Sin datos",
+                "No hay facturas pagadas para exportar en este período."
+            )
+            return
+
+        ruta = filedialog.asksaveasfilename(
+            title="Guardar reporte Excel",
+            defaultextension=".xlsx",
+            filetypes=[("Archivo Excel", "*.xlsx")],
+            initialfile=f"reporte_ventas_{periodo_seleccionado.lower().replace(' ', '_')}.xlsx"
+        )
+
+        if not ruta:
+            return
+
+        try:
+            libro = Workbook()
+            hoja = libro.active
+            hoja.title = "Ventas cobradas"
+
+            hoja.append(["RESTAURANTE VIVALDI"])
+            hoja.append([f"Reporte de ventas cobradas: {periodo_seleccionado}"])
+            hoja.append([])
+            hoja.append([
+                "N.º Factura",
+                "Fecha",
+                "Total ($)",
+                "Método de pago",
+                "Mesero"
+            ])
+
+            for factura in facturas:
+                hoja.append([
+                    factura[0],
+                    factura[1],
+                    float(factura[2] or 0),
+                    factura[3] or "No especificado",
+                    factura[4] or "No asignado"
+                ])
+
+            fila_total = hoja.max_row + 1
+            hoja.cell(row=fila_total, column=2, value="TOTAL COBRADO")
+            hoja.cell(
+                row=fila_total,
+                column=3,
+                value=datos["ingresos"]
+            )
+
+            for celda in hoja[4]:
+                celda.font = Font(bold=True, color="FFFFFF")
+                celda.fill = PatternFill(
+                    "solid",
+                    fgColor="223D2D"
+                )
+                celda.alignment = Alignment(horizontal="center")
+
+            for fila in hoja.iter_rows(
+                    min_row=5,
+                    max_row=fila_total
+            ):
+                for celda in fila:
+                    celda.alignment = Alignment(vertical="center")
+
+            for fila in range(5, fila_total):
+                hoja.cell(row=fila, column=3).number_format = '$#,##0.00'
+
+            hoja.cell(row=fila_total, column=3).number_format = '$#,##0.00'
+
+            for celda in hoja[fila_total]:
+                celda.font = Font(bold=True)
+                celda.fill = PatternFill(
+                    "solid",
+                    fgColor="D9BC8C"
+                )
+
+            hoja.column_dimensions["A"].width = 18
+            hoja.column_dimensions["B"].width = 24
+            hoja.column_dimensions["C"].width = 18
+            hoja.column_dimensions["D"].width = 24
+            hoja.column_dimensions["E"].width = 28
+
+            hoja.freeze_panes = "A5"
+            hoja.auto_filter.ref = f"A4:D{fila_total - 1}"
+
+            libro.save(ruta)
+
+            messagebox.showinfo(
+                "Reporte generado",
+                "El reporte Excel se guardó correctamente."
+            )
+
+        except Exception as error:
+            messagebox.showerror(
+                "Error al exportar Excel",
+                f"No se pudo generar el reporte:\n{error}"
+            )
+
+    def obtener_resumen_reservaciones(periodo="Esta semana"):
+        conexion = conectar()
+
+        if not conexion:
+            return {
+                "reservaciones": 0,
+                "clientes": 0,
+                "estados": [
+                    ("Confirmadas", 0, VERDE),
+                    ("Pendientes", 0, BEIGE),
+                    ("Canceladas", 0, VINO),
+                    ("Finalizadas", 0, GRIS)
+                ]
+            }
+
+        cursor = None
+
+        try:
+            cursor = conexion.cursor()
+
+            filtros = {
+                "Hoy": "fecha = CURDATE()",
+                "Esta semana": (
+                    "YEARWEEK(fecha, 1) = YEARWEEK(CURDATE(), 1)"
+                ),
+                "Este mes": (
+                    "YEAR(fecha) = YEAR(CURDATE()) "
+                    "AND MONTH(fecha) = MONTH(CURDATE())"
+                ),
+                "Este año": "YEAR(fecha) = YEAR(CURDATE())"
+            }
+
+            condicion = filtros.get(periodo, filtros["Esta semana"])
+
+            cursor.execute(
+                f"""
+                SELECT
+                    COUNT(*),
+                    COALESCE(SUM(estado = 'Confirmada'), 0),
+                    COALESCE(SUM(estado = 'Pendiente'), 0),
+                    COALESCE(SUM(estado = 'Cancelada'), 0),
+                    COALESCE(SUM(estado = 'Completada'), 0)
+                FROM Reserva
+                WHERE {condicion}
+                """
+            )
+
+            fila = cursor.fetchone()
+
+            reservaciones = int(fila[0] or 0)
+
+            estados = [
+                ("Confirmadas", int(fila[1] or 0), VERDE),
+                ("Pendientes", int(fila[2] or 0), BEIGE),
+                ("Canceladas", int(fila[3] or 0), VINO),
+                ("Finalizadas", int(fila[4] or 0), GRIS)
+            ]
+
+            cursor.execute("SELECT COUNT(*) FROM Cliente")
+            clientes = int(cursor.fetchone()[0] or 0)
+
+            return {
+                "reservaciones": reservaciones,
+                "clientes": clientes,
+                "estados": estados
+            }
+
+        except Exception as error:
+            print("Error al obtener reservaciones y clientes:", error)
+            raise
+
+        finally:
+            if cursor:
+                cursor.close()
+            conexion.close()
+
+    def mostrar_reportes(periodo_inicial="Esta semana"):
         limpiar_vista()
+        mostrar_encabezados(False)
         activar_boton("REPORTES")
 
-        # Encabezado
         encabezado = tk.Frame(vista_actual, bg=CREMA)
-        encabezado.pack(fill="x", padx=30, pady=(25, 10))
+        encabezado.pack(fill="x", pady=(8, 12))
 
         tk.Label(
             encabezado,
             text="Reportes y estadísticas",
-            font=("Georgia", 24, "bold"),
+            font=("Georgia", 22, "bold"),
             bg=CREMA,
             fg=VERDE_OSCURO
         ).pack(anchor="w")
@@ -5362,14 +5235,13 @@ def interfaz_administrador():
         tk.Label(
             encabezado,
             text="Resumen del rendimiento de Restaurante Vivaldi",
-            font=("Arial", 11),
+            font=("Segoe UI", 9),
             bg=CREMA,
             fg=VERDE
         ).pack(anchor="w", pady=(5, 0))
 
-        # Barra de filtros
         barra_filtros = tk.Frame(vista_actual, bg=CREMA)
-        barra_filtros.pack(fill="x", padx=30, pady=15)
+        barra_filtros.pack(fill="x", pady=15)
 
         tk.Label(
             barra_filtros,
@@ -5379,7 +5251,15 @@ def interfaz_administrador():
             fg=VERDE_OSCURO
         ).pack(side="left", padx=(0, 10))
 
-        periodo = tk.StringVar(value="Esta semana")
+        periodo = tk.StringVar(value=periodo_inicial)
+
+        datos = obtener_datos_reportes(periodo.get())
+        ingresos_reales = datos["ingresos"]
+        ventas_reales = datos["ventas"]
+
+        resumen = obtener_resumen_reservaciones(periodo.get())
+        reservaciones_reales = resumen["reservaciones"]
+        clientes_reales = resumen["clientes"]
 
         selector_periodo = ttk.Combobox(
             barra_filtros,
@@ -5395,7 +5275,38 @@ def interfaz_administrador():
         )
         selector_periodo.pack(side="left", ipady=4)
 
-        # Contenedor desplazable
+
+        tk.Button(
+            barra_filtros,
+            text="Exportar PDF",
+            command=lambda: exportar_reporte_pdf(periodo.get()),
+            bg=VINO,
+            fg=BLANCO,
+            activebackground=VINO,
+            activeforeground=BLANCO,
+            font=("Arial", 9, "bold"),
+            relief="flat",
+            cursor="hand2",
+            padx=12,
+            pady=7
+        ).pack(side="right", padx=(6, 0))
+
+        tk.Button(
+            barra_filtros,
+            text="Exportar Excel",
+            command=lambda: exportar_reporte_excel(periodo.get()),
+            bg=VERDE,
+            fg=BLANCO,
+            activebackground=VERDE,
+            activeforeground=BLANCO,
+            font=("Arial", 9, "bold"),
+            relief="flat",
+            cursor="hand2",
+            padx=12,
+            pady=7
+        ).pack(side="right", padx=(6, 0))
+
+
         contenedor = tk.Frame(vista_actual, bg=CREMA)
         contenedor.pack(
             fill="both",
@@ -5449,20 +5360,17 @@ def interfaz_administrador():
 
         canvas.bind("<MouseWheel>", desplazar_reportes)
 
-        # Tarjetas de indicadores
         indicadores = tk.Frame(contenido, bg=CREMA)
-        indicadores.pack(fill="x", pady=(0, 20))
+        indicadores.pack(fill="x", pady=(8, 20))
 
         datos_indicadores = [
-            ("INGRESOS", "$1,850.00", "+12.5%", VERDE),
-            ("RESERVACIONES", "86", "+8.2%", VINO),
-            ("CLIENTES", "124", "+15.0%", VERDE_OSCURO),
-            ("OCUPACIÓN", "78%", "+6.4%", VINO)
+            ("INGRESOS", f"${ingresos_reales:,.2f}", VERDE),
+            ("VENTAS COBRADAS", str(ventas_reales), VERDE_OSCURO),
+            ("RESERVACIONES", str(reservaciones_reales), VINO),
+            ("CLIENTES", str(clientes_reales), VERDE_OSCURO)
         ]
 
-        for columna, (titulo, valor, variacion, color) in enumerate(
-            datos_indicadores
-        ):
+        for columna, (titulo, valor, color) in enumerate(datos_indicadores):
             tarjeta = tk.Frame(
                 indicadores,
                 bg=BLANCO,
@@ -5498,15 +5406,7 @@ def interfaz_administrador():
                 font=("Georgia", 19, "bold"),
                 bg=BLANCO,
                 fg=VERDE_OSCURO
-            ).pack(anchor="w", padx=12)
-
-            tk.Label(
-                tarjeta,
-                text=variacion + " respecto al período anterior",
-                font=("Arial", 8),
-                bg=BLANCO,
-                fg=VERDE
-            ).pack(anchor="w", padx=12, pady=(6, 14))
+            ).pack(anchor="w", pady=(8, 12))
 
             indicadores.grid_columnconfigure(
                 columna,
@@ -5514,11 +5414,9 @@ def interfaz_administrador():
                 uniform="indicadores"
             )
 
-        # Fila de gráficos
         fila_graficos = tk.Frame(contenido, bg=CREMA)
-        fila_graficos.pack(fill="x", pady=(0, 20))
+        fila_graficos.pack(fill="x", pady=(8, 12))
 
-        # Gráfico de ingresos
         tarjeta_ingresos = tk.Frame(
             fila_graficos,
             bg=BLANCO,
@@ -5538,7 +5436,7 @@ def interfaz_administrador():
             font=("Georgia", 15, "bold"),
             bg=BLANCO,
             fg=VERDE_OSCURO
-        ).pack(anchor="w", padx=18, pady=(18, 3))
+        ).pack(anchor="w", pady=(8, 12))
 
         tk.Label(
             tarjeta_ingresos,
@@ -5561,15 +5459,69 @@ def interfaz_administrador():
             pady=10
         )
 
-        ingresos = [
-            ("Lun", 180),
-            ("Mar", 240),
-            ("Mié", 160),
-            ("Jue", 310),
-            ("Vie", 390),
-            ("Sáb", 450),
-            ("Dom", 280)
-        ]
+        def obtener_ingresos_grafica(periodo_seleccionado):
+            conexion = conectar()
+
+            if not conexion:
+                return []
+
+            cursor = None
+
+            try:
+                cursor = conexion.cursor()
+
+                if periodo_seleccionado == "Hoy":
+                    agrupacion = "HOUR(fecha)"
+                    etiqueta = "DATE_FORMAT(fecha, '%H:00')"
+                    condicion = "DATE(fecha) = CURDATE()"
+                elif periodo_seleccionado == "Esta semana":
+                    agrupacion = "DATE(fecha)"
+                    etiqueta = "DATE_FORMAT(fecha, '%a %d')"
+                    condicion = (
+                        "YEARWEEK(fecha, 1) = YEARWEEK(CURDATE(), 1)"
+                    )
+                elif periodo_seleccionado == "Este mes":
+                    agrupacion = "DATE(fecha)"
+                    etiqueta = "DATE_FORMAT(fecha, '%d/%m')"
+                    condicion = (
+                        "YEAR(fecha) = YEAR(CURDATE()) "
+                        "AND MONTH(fecha) = MONTH(CURDATE())"
+                    )
+                else:
+                    agrupacion = "MONTH(fecha)"
+                    etiqueta = "DATE_FORMAT(fecha, '%b')"
+                    condicion = "YEAR(fecha) = YEAR(CURDATE())"
+
+                cursor.execute(
+                    f"""
+                    SELECT {etiqueta}, SUM(total)
+                    FROM Factura
+                    WHERE estado_pago = 'Pagado'
+                      AND {condicion}
+                    GROUP BY {agrupacion}, {etiqueta}
+                    ORDER BY {agrupacion}
+                    """.replace(
+                        "SELECT " + etiqueta,
+                        "SELECT " + etiqueta,
+                        1
+                    )
+                )
+
+                return [
+                    (str(fila[0]), float(fila[1] or 0))
+                    for fila in cursor.fetchall()
+                ]
+
+            except Exception as error:
+                print("Error al obtener ingresos para el gráfico:", error)
+                return []
+
+            finally:
+                if cursor:
+                    cursor.close()
+                conexion.close()
+
+        ingresos = obtener_ingresos_grafica(periodo.get())
 
         def dibujar_ingresos(event=None):
             grafica_ingresos.delete("all")
@@ -5586,10 +5538,14 @@ def interfaz_administrador():
 
             altura_util = alto - margen_inferior - margen_superior
             ancho_util = ancho - margen_izquierdo - 15
-            maximo = 500
+            maximo = max(
+                (cantidad for _, cantidad in ingresos),
+                default=0
+            )
+            maximo = maximo * 1.15 if maximo > 0 else 1
 
-            # Líneas horizontales
-            for cantidad in (0, 100, 200, 300, 400, 500):
+            for indice in range(6):
+                cantidad = maximo * indice / 5
                 y = (
                     alto - margen_inferior
                     - (cantidad / maximo) * altura_util
@@ -5611,6 +5567,16 @@ def interfaz_administrador():
                     font=("Arial", 8),
                     fill=GRIS
                 )
+
+                if not ingresos:
+                    grafica_ingresos.create_text(
+                        margen_izquierdo // 2,
+                        margen_superior // 2,
+                        text="No hay ventas registradas en este período",
+                        font=("Arial", 11),
+                        fill=GRIS
+                    )
+                    return
 
             espacio = ancho_util / len(ingresos)
             ancho_barra = min(28, espacio * 0.55)
@@ -5698,12 +5664,7 @@ def interfaz_administrador():
             pady=10
         )
 
-        estados = [
-            ("Confirmadas", 42, VERDE),
-            ("Pendientes", 25, BEIGE),
-            ("Canceladas", 12, VINO),
-            ("Finalizadas", 7, GRIS)
-        ]
+        estados = resumen["estados"]
 
         def dibujar_reservaciones(event=None):
             grafica_reservaciones.delete("all")
@@ -5764,7 +5725,8 @@ def interfaz_administrador():
             dibujar_reservaciones
         )
 
-        # Resumen inferior
+
+        # Resumen del período
         tarjeta_resumen = tk.Frame(
             contenido,
             bg=BLANCO,
@@ -5781,15 +5743,17 @@ def interfaz_administrador():
             fg=VERDE_OSCURO
         ).pack(anchor="w", padx=20, pady=(18, 10))
 
+        texto_resumen = (
+            f"Período consultado: {periodo.get()}\n"
+            f"Ingresos cobrados: ${ingresos_reales:,.2f}\n"
+            f"Cantidad de facturas pagadas: {ventas_reales}\n"
+            f"Reservaciones registradas: {reservaciones_reales}\n"
+            f"Clientes registrados en el sistema: {clientes_reales}"
+        )
+
         tk.Label(
             tarjeta_resumen,
-            text=(
-                "• El sábado presenta el mayor ingreso de la semana.\n"
-                "• Las reservaciones confirmadas representan la mayoría "
-                "de los registros.\n"
-                "• Los indicadores mostrados son datos de ejemplo y "
-                "deberán conectarse a la base de datos."
-            ),
+            text=texto_resumen,
             font=("Arial", 10),
             bg=BLANCO,
             fg=GRIS,
@@ -5798,18 +5762,41 @@ def interfaz_administrador():
         ).pack(anchor="w", padx=20, pady=(0, 18))
 
         def cambiar_periodo(event=None):
-            # El filtro es visual por ahora.
-            # Más adelante se conectará a las consultas de MySQL.
-            pass
+            periodo_seleccionado = periodo.get()
+            mostrar_reportes(periodo_seleccionado)
 
         selector_periodo.bind(
             "<<ComboboxSelected>>",
             cambiar_periodo
         )
 
-    # =====================================================
-    # MENÚ LATERAL
-    # =====================================================
+    def cerrar_sesion():
+        respuesta = messagebox.askyesno(
+            "Cerrar sesión",
+            "¿Deseas cerrar sesión?"
+        )
+
+        if not respuesta:
+            return
+
+        try:
+            ruta_login = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "inicio_sistema.py"
+            )
+
+            subprocess.Popen([
+                sys.executable,
+                ruta_login
+            ])
+
+            ventana.destroy()
+
+        except Exception as error:
+            messagebox.showerror(
+                "Error al cerrar sesión",
+                f"No se pudo abrir el inicio de sesión:\n{error}"
+            )
 
     crear_boton_menu(
         "INICIO",
@@ -5827,11 +5814,6 @@ def interfaz_administrador():
     )
 
     crear_boton_menu(
-        "VENTAS",
-        lambda: vista_pendiente("VENTAS")
-    )
-
-    crear_boton_menu(
         "INVENTARIO",
         mostrar_inventario
     )
@@ -5842,30 +5824,35 @@ def interfaz_administrador():
     )
 
     crear_boton_menu(
-        "PLANILLA",
-        lambda: vista_pendiente("PLANILLA")
-    )
-
-    crear_boton_menu(
         "REPORTES",
         mostrar_reportes
     )
 
-    # =====================================================
-    # MOSTRAR INICIO AL ABRIR
-    # =====================================================
+    tk.Frame(
+        menu_navegacion,
+        bg=BEIGE,
+        height=1
+    ).pack(fill="x", pady=(18, 10))
+
+    tk.Button(
+        menu_navegacion,
+        text="CERRAR SESIÓN",
+        bg=VERDE_OSCURO,
+        fg=CREMA_CLARO,
+        activebackground=CREMA_CLARO,
+        activeforeground=BLANCO,
+        bd=0,
+        relief="flat",
+        anchor="w",
+        padx=10,
+        pady=13,
+        font=("Arial", 10, "bold"),
+        cursor="hand2",
+        command=cerrar_sesion
+    ).pack(fill="x", pady=4)
 
     mostrar_inicio()
-
-    # =====================================================
-    # EJECUTAR VENTANA
-    # =====================================================
-
     ventana.mainloop()
-
-# =========================================================
-# EJECUTAR ARCHIVO
-# =========================================================
 
 if __name__ == "__main__":
 

@@ -6,22 +6,10 @@ import mysql.connector
 from PIL import Image, ImageTk
 
 
-# =========================================================
-# CONFIGURACIÓN DE LA BASE DE DATOS
-# =========================================================
-# Puedes cambiar estos valores con variables de entorno
-# (VIVALDI_DB_HOST, VIVALDI_DB_USER, VIVALDI_DB_PASSWORD,
-# VIVALDI_DB_NAME) para no dejar la contraseña en el código.
-
 HOST = os.getenv("VIVALDI_DB_HOST", "localhost")
 USER = os.getenv("VIVALDI_DB_USER", "root")
 PASSWORD = os.getenv("VIVALDI_DB_PASSWORD", "sqldecami")
 DATABASE = os.getenv("VIVALDI_DB_NAME", "restaurante_vivaldi")
-
-
-# =========================================================
-# LOGOS
-# =========================================================
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -29,25 +17,12 @@ LOGO_PNG = os.path.join(BASE_DIR, "vivaldi.png")
 LOGO_ICO = os.path.join(BASE_DIR, "vivaldi.ico")
 
 
-# =========================================================
-# PALETA DE COLORES - RESTAURANTE VIVALDI
-# =========================================================
-
 CREMA = "#fbf8f1"
 CREMA_CLARO = "#fbf7f1"
-
 BEIGE = "#d9bc8c"
-
 VERDE = "#223d2d"
 VERDE_OSCURO = "#12261c"
-
-# Vino únicamente como pequeño detalle
 VINO = "#6b2333"
-
-
-# =========================================================
-# CONEXIÓN A MYSQL
-# =========================================================
 
 def conectar():
     try:
@@ -66,17 +41,11 @@ def conectar():
 
         return None
 
-
-# =========================================================
-# ABRIR VISTA DE RECEPCIÓN
-# =========================================================
-
 def abrir_recepcion(usuario, rol):
     ventana.destroy()
 
     try:
         from interfaz_recepcionista import interfaz_recepcionista
-
         interfaz_recepcionista()
 
     except ImportError:
@@ -91,17 +60,11 @@ def abrir_recepcion(usuario, rol):
             f"No se pudo abrir la vista de recepción.\n\n{error}"
         )
 
-
-# =========================================================
-# ABRIR VISTA DE ADMINISTRADOR
-# =========================================================
-
 def abrir_administrador(usuario, rol):
     ventana.destroy()
 
     try:
         from interfaz_administrador import interfaz_administrador
-
         interfaz_administrador()
 
     except ImportError:
@@ -115,11 +78,6 @@ def abrir_administrador(usuario, rol):
             "Error",
             f"No se pudo abrir la vista del administrador.\n\n{error}"
         )
-
-
-# =========================================================
-# ABRIR VISTA DE MESERO
-# =========================================================
 
 def abrir_mesero(usuario, rol):
     ventana.destroy()
@@ -140,11 +98,6 @@ def abrir_mesero(usuario, rol):
             "Error",
             f"No se pudo abrir la vista de mesero.\n\n{error}"
         )
-
-
-# =========================================================
-# INICIO DE SESIÓN
-# =========================================================
 
 def iniciar_sesion():
     usuario = entrada_usuario.get().strip()
@@ -238,36 +191,18 @@ def iniciar_sesion():
 
         conexion.close()
 
-
-# =========================================================
-# VENTANA DE INICIO DE SESIÓN
-# =========================================================
-
 ventana = tk.Tk()
-
+ventana.state("zoomed")
 ventana.title("Restaurante Vivaldi | Inicio de sesión")
-
 ventana.geometry("900x650")
-
 ventana.configure(bg=CREMA)
-
 ventana.resizable(False, False)
-
-
-# =========================================================
-# ICONO DE LA VENTANA
-# =========================================================
 
 try:
     ventana.iconbitmap(LOGO_ICO)
 
 except Exception:
     pass
-
-
-# =========================================================
-# MARCO PRINCIPAL
-# =========================================================
 
 principal = tk.Frame(
     ventana,
@@ -278,11 +213,6 @@ principal.pack(
     fill="both",
     expand=True
 )
-
-
-# =========================================================
-# TARJETA DE LOGIN
-# =========================================================
 
 tarjeta_login = tk.Frame(
     principal,
@@ -300,11 +230,6 @@ tarjeta_login.place(
 )
 
 tarjeta_login.pack_propagate(False)
-
-
-# =========================================================
-# LOGO PNG TRANSPARENTE
-# =========================================================
 
 logo_tk = None
 
@@ -335,11 +260,6 @@ except Exception:
         pady=(35, 15)
     )
 
-
-# =========================================================
-# TÍTULO
-# =========================================================
-
 tk.Label(
     tarjeta_login,
     text="RESTAURANTE VIVALDI",
@@ -360,11 +280,6 @@ tk.Label(
 ).pack(
     pady=(0, 22)
 )
-
-
-# =========================================================
-# CAMPO USUARIO
-# =========================================================
 
 marco_usuario = tk.Frame(
     tarjeta_login,
@@ -410,11 +325,6 @@ entrada_usuario.pack(
     padx=8,
     ipady=8
 )
-
-
-# =========================================================
-# CAMPO CONTRASEÑA
-# =========================================================
 
 marco_contraseña = tk.Frame(
     tarjeta_login,
@@ -463,11 +373,6 @@ entrada_contraseña.pack(
     ipady=8
 )
 
-
-# =========================================================
-# BOTÓN INGRESAR
-# =========================================================
-
 boton_ingresar = tk.Button(
     tarjeta_login,
     text="INGRESAR",
@@ -487,11 +392,6 @@ boton_ingresar.pack(
     fill="x",
     ipady=11
 )
-
-
-# =========================================================
-# TEXTO INFERIOR
-# =========================================================
 
 tk.Label(
     tarjeta_login,
@@ -514,11 +414,6 @@ tk.Label(
     pady=(2, 0)
 )
 
-
-# =========================================================
-# PEQUEÑO DETALLE VINO
-# =========================================================
-
 tk.Frame(
     tarjeta_login,
     bg=VINO,
@@ -528,22 +423,11 @@ tk.Frame(
     pady=(8, 0)
 )
 
-
-# =========================================================
-# ENTER PARA INICIAR SESIÓN
-# =========================================================
-
 ventana.bind(
     "<Return>",
     lambda evento: iniciar_sesion()
 )
 
-
 entrada_usuario.focus()
-
-
-# =========================================================
-# EJECUTAR
-# =========================================================
 
 ventana.mainloop()

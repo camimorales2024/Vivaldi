@@ -14,17 +14,10 @@ except ImportError:
     Image = None
     ImageTk = None
 
-
-# =========================================================
-# CONFIGURACIÓN DE MYSQL
-# =========================================================
-# Deben coincidir con las de inicio_sistema.py. También se
-# pueden definir con variables de entorno.
-
-HOST = os.getenv("VIVALDI_DB_HOST", "localhost")
-USER = os.getenv("VIVALDI_DB_USER", "root")
-PASSWORD = os.getenv("VIVALDI_DB_PASSWORD", "sqldecami")
-DATABASE = os.getenv("VIVALDI_DB_NAME", "restaurante_vivaldi")
+HOST = "localhost"
+USER = "root"
+PASSWORD = "sqldecami"
+DATABASE = "restaurante_vivaldi"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -46,11 +39,6 @@ def conectar():
         )
         return None
 
-
-# =========================================================
-# COLORES DE RESTAURANTE VIVALDI
-# =========================================================
-
 CREMA = "#fbf8f1"
 CREMA_CLARO = "#fbf7f1"
 BEIGE = "#d9bc8c"
@@ -62,46 +50,18 @@ BLANCO = "#ffffff"
 GRIS = "#6f6f6f"
 GRIS_CLARO = "#e8e3da"
 
-
-# =========================================================
-# VISTA PRINCIPAL DEL MESERO
-# =========================================================
-# Al cerrar sesión se abre inicio_sistema.py como un programa
-# nuevo (proceso aparte), así el login queda intacto.
-
 def interfaz_mesero(usuario=None, rol=None):
 
     ventana = tk.Tk()
-    ventana.title("Restaurante Vivaldi - Mesero")
+    ventana.state("zoomed")
+    ventana.title("Restaurante Vivaldi | Mesero")
     ventana.configure(bg=CREMA)
-
-    # -----------------------------------------------------
-    # PANTALLA COMPLETA  (F11 alterna, Escape sale)
-    # -----------------------------------------------------
-
-    ventana.attributes("-fullscreen", True)
-
-    def alternar_pantalla_completa(event=None):
-        actual = bool(ventana.attributes("-fullscreen"))
-        ventana.attributes("-fullscreen", not actual)
-
-    def salir_pantalla_completa(event=None):
-        ventana.attributes("-fullscreen", False)
-
-    ventana.bind("<F11>", alternar_pantalla_completa)
-    ventana.bind("<Escape>", salir_pantalla_completa)
-
-    try:
-        ventana.iconbitmap(os.path.join(BASE_DIR, "vivaldi.ico"))
-    except Exception:
-        pass
+    ventana.iconbitmap("vivaldi.ico")
+    ventana.geometry("1100x720")
+    ventana.resizable(False, False)
 
     id_empleado = None
     nombre_mesero = usuario or "Mesero"
-
-    # -----------------------------------------------------
-    # OBTENER IDENTIDAD DEL EMPLEADO
-    # -----------------------------------------------------
 
     if usuario:
         conexion = conectar()
@@ -155,14 +115,9 @@ def interfaz_mesero(usuario=None, rol=None):
 
             conexion.close()
 
-    # El estado de la cuenta activa en esta ventana.
     orden_actual = [None]
     mesa_actual = [None]
     cliente_actual = [None]
-
-    # =====================================================
-    # ESTILOS DE TABLAS
-    # =====================================================
 
     estilo = ttk.Style(ventana)
     estilo.theme_use("clam")
@@ -469,14 +424,34 @@ def interfaz_mesero(usuario=None, rol=None):
         pady=20
     )
 
+    franja_bienvenida = tk.Frame(cuerpo_inicio, bg=VERDE_OSCURO)
+    franja_bienvenida.pack(fill="x", pady=(0, 16))
+
+    tk.Frame(
+        franja_bienvenida,
+        bg=BEIGE,
+        width=6
+    ).pack(side="left", fill="y")
+
+    texto_bienvenida = tk.Frame(franja_bienvenida, bg=VERDE_OSCURO)
+    texto_bienvenida.pack(side="left", fill="x", expand=True, padx=16, pady=14)
+
     etiqueta_bienvenida = tk.Label(
-        cuerpo_inicio,
+        texto_bienvenida,
         text=f"Bienvenido/a, {nombre_mesero}",
-        bg=BLANCO,
-        fg=VERDE_OSCURO,
-        font=("Georgia", 17, "bold")
+        bg=VERDE_OSCURO,
+        fg=CREMA_CLARO,
+        font=("Georgia", 19, "bold")
     )
-    etiqueta_bienvenida.pack(anchor="w", pady=(0, 8))
+    etiqueta_bienvenida.pack(anchor="w", pady=(0, 4))
+
+    tk.Label(
+        texto_bienvenida,
+        text="Organiza tus mesas, continúa pedidos y revisa las cuentas activas.",
+        bg=VERDE_OSCURO,
+        fg=BEIGE,
+        font=("Arial", 10)
+    ).pack(anchor="w")
 
     etiqueta_fecha = tk.Label(
         cuerpo_inicio,
@@ -489,36 +464,42 @@ def interfaz_mesero(usuario=None, rol=None):
 
     resumen_mesas = tk.Label(
         cuerpo_inicio,
-        text="Reservas confirmadas: —",
-        bg=BLANCO,
+        text="RESERVAS ATENDIDAS     —",
+        bg=CREMA_CLARO,
         fg=VERDE,
-        font=("Arial", 12, "bold")
+        font=("Arial", 12, "bold"),
+        padx=14,
+        pady=12,
+        anchor="w"
     )
-    resumen_mesas.pack(anchor="w", pady=8)
+    resumen_mesas.pack(fill="x", pady=6)
 
     resumen_pedidos = tk.Label(
         cuerpo_inicio,
-        text="Tus pedidos activos: —",
-        bg=BLANCO,
+        text="TUS PEDIDOS ACTIVOS     —",
+        bg=CREMA_CLARO,
         fg=VERDE,
-        font=("Arial", 12, "bold")
+        font=("Arial", 12, "bold"),
+        padx=14,
+        pady=12,
+        anchor="w"
     )
-    resumen_pedidos.pack(anchor="w", pady=8)
+    resumen_pedidos.pack(fill="x", pady=6)
 
     def actualizar_inicio():
         reservas = consultar(
             """
             SELECT COUNT(*)
-            FROM Reserva
-            WHERE fecha = %s
-              AND estado = 'Confirmada'
+            FROM Orden
+            WHERE id_empleado = %s
+              AND fecha = %s
             """,
-            (date.today(),)
-        )
+            (id_empleado, date.today())
+        ) if id_empleado is not None else [(0,)]
 
         if reservas is not None:
             resumen_mesas.config(
-                text=f"Reservas confirmadas: {reservas[0][0]}"
+                text=f"RESERVAS ATENDIDAS     {reservas[0][0]}"
             )
 
         if id_empleado is not None:
@@ -527,19 +508,22 @@ def interfaz_mesero(usuario=None, rol=None):
                 SELECT COUNT(*)
                 FROM Orden
                 WHERE id_empleado = %s
-                  AND estado IN ('Pendiente', 'Preparando')
+                  AND fecha = %s
+                  AND estado IN ('Pendiente', 'Preparando', 'Entregado')
+                  AND pedido_finalizado = 0
                 """,
-                (id_empleado,)
+                (id_empleado, date.today())
             )
 
             if pedidos is not None:
+                cantidad = min(pedidos[0][0], 2)
                 resumen_pedidos.config(
-                    text=f"Tus pedidos activos: {pedidos[0][0]}"
+                    text=f"TUS PEDIDOS ACTIVOS     {cantidad} / 2"
                 )
 
     crear_boton(
         cuerpo_inicio,
-        "VER MESAS",
+        "VER MESAS Y RESERVAS",
         lambda: cambiar_seccion("MESAS")
     ).pack(anchor="w", pady=(22, 0))
 
@@ -570,12 +554,8 @@ def interfaz_mesero(usuario=None, rol=None):
     )
 
     columnas_reservas = (
-        "id_reserva",
-        "hora",
-        "cliente",
-        "mesa",
-        "personas",
-        "estado"
+        "id_reserva", "hora", "cliente",
+        "mesa", "personas", "estado", "forma_pago"
     )
 
     tabla_reservas = ttk.Treeview(
@@ -591,7 +571,9 @@ def interfaz_mesero(usuario=None, rol=None):
         "cliente": ("Cliente", 190),
         "mesa": ("Mesa", 70),
         "personas": ("Personas", 75),
-        "estado": ("Estado", 105)
+        "estado": ("Estado", 105),
+        "forma_pago": ("Forma de pago", 115)
+
     }
 
     for columna, (texto, ancho) in encabezados_reservas.items():
@@ -631,7 +613,8 @@ def interfaz_mesero(usuario=None, rol=None):
                 c.apellido,
                 m.numero_mesa,
                 r.cantidad_personas,
-                r.estado
+                r.estado,
+                r.forma_pago
             FROM Reserva r
             INNER JOIN Cliente c
                 ON c.id_cliente = r.id_cliente
@@ -655,7 +638,8 @@ def interfaz_mesero(usuario=None, rol=None):
                 apellido,
                 numero_mesa,
                 personas,
-                estado
+                estado,
+                forma_pago
             ) = fila
 
             if isinstance(hora, timedelta):
@@ -676,7 +660,9 @@ def interfaz_mesero(usuario=None, rol=None):
                     f"{nombre} {apellido}",
                     numero_mesa,
                     personas,
-                    estado
+                    estado,
+                    forma_pago or "Efectivo"
+
                 )
             )
 
@@ -721,13 +707,8 @@ def interfaz_mesero(usuario=None, rol=None):
             # si otro mesero ya inició un pedido en esa mesa.
             cursor.execute(
                 """
-                SELECT
-                    r.id_cliente,
-                    r.id_mesa,
-                    r.hora,
-                    m.numero_mesa,
-                    c.nombre,
-                    c.apellido
+                SELECT r.id_cliente, r.id_mesa, r.hora,
+                    m.numero_mesa, c.nombre, c.apellido
                 FROM Reserva r
                 INNER JOIN Mesa m
                     ON m.id_mesa = r.id_mesa
@@ -796,12 +777,13 @@ def interfaz_mesero(usuario=None, rol=None):
                 """
                 SELECT id_orden, id_empleado
                 FROM Orden
-                WHERE id_mesa = %s
-                  AND estado IN ('Pendiente', 'Preparando')
+                WHERE id_reserva = %s
+                  AND estado IN ('Pendiente', 'Preparando', 'Entregado')
+                  AND pedido_finalizado = 0
                 LIMIT 1
                 FOR UPDATE
                 """,
-                (id_mesa,)
+                (id_reserva,)
             )
 
             orden_existente = cursor.fetchone()
@@ -814,11 +796,10 @@ def interfaz_mesero(usuario=None, rol=None):
                     messagebox.showwarning(
                         "Mesa atendida",
                         "Otro mesero ya tiene una orden activa "
-                        "para esta mesa. Selecciona otra reserva."
+                        "para esta reserva."
                     )
                     return
 
-                # Si es la orden del mismo mesero, la reutiliza.
                 conexion.commit()
 
                 orden_actual[0] = id_orden_existente
@@ -833,7 +814,33 @@ def interfaz_mesero(usuario=None, rol=None):
                 )
                 return
 
-            # Crear una orden nueva para el mesero actual.
+            # Comprobar si la mesa tiene otra orden activa,
+            # aunque pertenezca a una reserva diferente.
+            cursor.execute(
+                """
+                SELECT id_orden
+                FROM Orden
+                WHERE id_mesa = %s
+                  AND estado IN ('Pendiente', 'Preparando', 'Entregado')
+                  AND pedido_finalizado = 0
+                  AND (id_reserva IS NULL OR id_reserva != %s)
+                LIMIT 1
+                FOR UPDATE
+                """,
+                (id_mesa, id_reserva)
+            )
+
+            otra_orden = cursor.fetchone()
+
+            if otra_orden:
+                conexion.rollback()
+                messagebox.showwarning(
+                    "Mesa con una orden activa",
+                    "Esta mesa tiene otra orden pendiente. "
+                    "Revisa su estado antes de atender la reserva."
+                )
+                return
+
             ahora = datetime.now()
 
             cursor.execute(
@@ -845,21 +852,24 @@ def interfaz_mesero(usuario=None, rol=None):
                     estado,
                     id_cliente,
                     id_mesa,
-                    id_empleado
+                    id_empleado,
+                    id_reserva
                 )
-                VALUES (%s, %s, 'Local', 'Pendiente', %s, %s, %s)
+                VALUES (%s, %s, 'Local', 'Pendiente', %s, %s, %s, %s)
                 """,
                 (
                     ahora.date(),
                     ahora.time().replace(microsecond=0),
                     id_cliente,
                     id_mesa,
-                    id_empleado
+                    id_empleado,
+                    id_reserva
                 )
             )
 
             nuevo_id_orden = cursor.lastrowid
 
+            # Marcar la mesa como ocupada.
             cursor.execute(
                 """
                 UPDATE Mesa
@@ -870,13 +880,12 @@ def interfaz_mesero(usuario=None, rol=None):
                 (id_mesa,)
             )
 
-            # Si no se actualizó la mesa, algo cambió en el estado.
             if cursor.rowcount != 1:
                 conexion.rollback()
                 messagebox.showwarning(
                     "Mesa no disponible",
-                    "El estado de la mesa cambió. "
-                    "Actualiza las reservas antes de continuar."
+                    "No se pudo ocupar la mesa. "
+                    "Actualiza las reservas e inténtalo nuevamente."
                 )
                 return
 
@@ -1494,6 +1503,7 @@ def interfaz_mesero(usuario=None, rol=None):
                 WHERE id_orden = %s
                   AND id_empleado = %s
                   AND estado IN ('Pendiente', 'Preparando')
+                  AND pedido_finalizado = 0
                 FOR UPDATE
                 """,
                 (orden_actual[0], id_empleado)
@@ -1693,12 +1703,21 @@ def interfaz_mesero(usuario=None, rol=None):
         pady=(15, 5)
     )
 
-    crear_boton(
+    boton_quitar_platillo = crear_boton(
         barra_inferior_cuenta,
         "QUITAR PLATILLO",
         lambda: quitar_platillo(),
         color=VINO
-    ).pack(side="left")
+    )
+    boton_quitar_platillo.pack(side="left")
+
+    boton_cobrar = crear_boton(
+        barra_inferior_cuenta,
+        "COBRAR CUENTA",
+        lambda: cobrar_cuenta(),
+        color=VINO
+    )
+    boton_cobrar.pack(side="left", padx=(8, 0))
 
     etiqueta_total = tk.Label(
         barra_inferior_cuenta,
@@ -1744,6 +1763,21 @@ def interfaz_mesero(usuario=None, rol=None):
                 f"Orden: #{orden_actual[0]}"
             )
         )
+
+        estado_orden = consultar(
+            "SELECT estado FROM Orden WHERE id_orden = %s AND id_empleado = %s",
+            (orden_actual[0], id_empleado)
+        )
+
+        se_puede_quitar = bool(
+            estado_orden and estado_orden[0][0] == "Pendiente"
+        )
+
+        if se_puede_quitar:
+            if not boton_quitar_platillo.winfo_manager():
+                boton_quitar_platillo.pack(side="left")
+        else:
+            boton_quitar_platillo.pack_forget()
 
     def cargar_detalles_orden():
         for fila in tabla_detalle.get_children():
@@ -1795,6 +1829,578 @@ def interfaz_mesero(usuario=None, rol=None):
         )
 
         actualizar_seleccion()
+
+    def cobrar_cuenta():
+        # Comprobar que se seleccionó una orden.
+        if orden_actual[0] is None:
+            messagebox.showwarning(
+                "Sin cuenta seleccionada",
+                "Selecciona una cuenta activa antes de cobrar."
+            )
+            return
+
+        if id_empleado is None:
+            messagebox.showerror(
+                "Error",
+                "No se pudo identificar al mesero."
+            )
+            return
+
+        id_orden = orden_actual[0]
+
+        # Consultar la orden, su reserva y la forma de pago.
+        datos = consultar(
+            """
+            SELECT o.id_orden, o.id_mesa, o.id_reserva,
+                o.pedido_finalizado, o.estado,
+                COALESCE(r.forma_pago, 'Efectivo'),
+                COALESCE(r.cobro_extra, 0),
+                r.solicitud_adicional
+            FROM Orden o
+            LEFT JOIN Reserva r
+                ON r.id_reserva = o.id_reserva
+            WHERE o.id_orden = %s
+              AND o.id_empleado = %s
+            """,
+            (id_orden, id_empleado)
+        )
+
+        if not datos:
+            messagebox.showerror(
+                "Orden no encontrada",
+                "No se encontró la orden seleccionada."
+            )
+            return
+
+        (id_orden, id_mesa, id_reserva, pedido_finalizado,
+            estado_orden, forma_pago, cobro_extra, solicitud
+        ) = datos[0]
+
+        if pedido_finalizado:
+            messagebox.showwarning(
+                "Cuenta finalizada",
+                "Esta orden ya fue cobrada o finalizada."
+            )
+            return
+
+        # Obtener los platillos que pertenecen a la orden.
+        detalles = consultar(
+            """
+            SELECT p.nombre, d.cantidad, d.subtotal
+            FROM Detalle_Orden d
+            INNER JOIN Platillo p
+                ON p.id_platillo = d.id_platillo
+            WHERE d.id_orden = %s
+            ORDER BY d.id_detalle
+            """,
+            (id_orden,)
+        )
+
+        if detalles is None:
+            messagebox.showerror(
+                "Error",
+                "No se pudieron consultar los platillos."
+            )
+            return
+
+        subtotal = sum(
+            (Decimal(str(fila[2])) for fila in detalles),
+            Decimal("0.00")
+        )
+
+        extra = Decimal(str(cobro_extra or 0))
+
+        if not detalles or subtotal <= 0:
+            messagebox.showwarning(
+                "Cuenta vacía",
+                "Agrega al menos un platillo antes de cobrar."
+            )
+            return
+
+        # Comprobar si ya existe una factura pagada.
+        facturas = consultar(
+            """
+            SELECT id_factura
+            FROM Factura
+            WHERE id_orden = %s
+              AND estado_pago = 'Pagado'
+            LIMIT 1
+            """,
+            (id_orden,)
+        )
+
+        if facturas is None:
+            messagebox.showerror(
+                "Error",
+                "No se pudo comprobar el estado de la factura."
+            )
+            return
+
+        if facturas:
+            messagebox.showwarning(
+                "Cobro duplicado",
+                "Esta orden ya tiene una factura pagada."
+            )
+            return
+
+        # Ventana de cobro.
+        ventana_cobro = tk.Toplevel(ventana)
+        ventana_cobro.title(f"Cobrar orden #{id_orden}")
+        ventana_cobro.configure(bg=CREMA)
+        ventana_cobro.transient(ventana)
+        ventana_cobro.grab_set()
+        ventana_cobro.resizable(False, False)
+        ventana_cobro.iconbitmap("vivaldi.ico")
+
+        marco = tk.Frame(
+            ventana_cobro,
+            bg=BLANCO,
+            padx=24,
+            pady=20
+        )
+        marco.pack(fill="both", expand=True, padx=12, pady=12)
+
+        tk.Label(
+            marco,
+            text=f"COBRO DE LA ORDEN #{id_orden}",
+            bg=BLANCO,
+            fg=VERDE,
+            font=("Georgia", 16, "bold")
+        ).pack(anchor="w", pady=(0, 12))
+
+        # Mostrar el detalle de los platillos.
+        for nombre, cantidad, importe in detalles:
+            tk.Label(
+                marco,
+                text=f"{cantidad} x {nombre}  —  ${Decimal(str(importe)):.2f}",
+                bg=BLANCO,
+                fg=VERDE_OSCURO,
+                font=("Arial", 10),
+                wraplength=430,
+                justify="left"
+            ).pack(anchor="w", pady=2)
+
+        tk.Label(
+            marco,
+            text=f"\nSubtotal de platillos: ${subtotal:.2f}",
+            bg=BLANCO,
+            fg=VERDE_OSCURO,
+            font=("Arial", 11)
+        ).pack(anchor="w")
+
+        tk.Label(
+            marco,
+            text=f"Cobro extra de reserva: ${extra:.2f}",
+            bg=BLANCO,
+            fg=VERDE_OSCURO,
+            font=("Arial", 11)
+        ).pack(anchor="w", pady=3)
+
+        tk.Label(
+            marco,
+            text=f"Forma de pago: {forma_pago}",
+            bg=BLANCO,
+            fg=VERDE,
+            font=("Arial", 11, "bold")
+        ).pack(anchor="w", pady=5)
+
+        if solicitud:
+            tk.Label(
+                marco,
+                text=f"Solicitud: {solicitud}",
+                bg=BLANCO,
+                fg=GRIS,
+                font=("Arial", 9),
+                wraplength=430,
+                justify="left"
+            ).pack(anchor="w", pady=3)
+
+        tk.Label(
+            marco,
+            text="Propina (opcional):",
+            bg=BLANCO,
+            fg=VERDE_OSCURO,
+            font=("Arial", 10, "bold")
+        ).pack(anchor="w", pady=(12, 4))
+
+        variable_propina = tk.StringVar(value="0.00")
+
+        entrada_propina = tk.Entry(
+            marco,
+            textvariable=variable_propina,
+            font=("Arial", 11),
+            width=18
+        )
+        entrada_propina.pack(anchor="w")
+
+        etiqueta_total_cobro = tk.Label(
+            marco,
+            text=f"TOTAL: ${subtotal + extra:.2f}",
+            bg=BLANCO,
+            fg=VINO,
+            font=("Georgia", 17, "bold")
+        )
+        etiqueta_total_cobro.pack(anchor="w", pady=12)
+
+        def actualizar_total(*args):
+            try:
+                propina = Decimal(
+                    variable_propina.get().strip() or "0"
+                )
+
+                if not propina.is_finite() or propina < 0:
+                    raise ValueError
+
+                total = subtotal + extra + propina
+
+                etiqueta_total_cobro.config(
+                    text=f"TOTAL: ${total:.2f}"
+                )
+
+            except (ValueError, ArithmeticError):
+                etiqueta_total_cobro.config(
+                    text="Revisa el valor de la propina."
+                )
+
+        variable_propina.trace_add("write", actualizar_total)
+
+        cobro_en_proceso = [False]
+
+        def confirmar_cobro():
+            if not ventana_cobro.winfo_exists():
+                return
+
+            if cobro_en_proceso[0]:
+                return
+
+            try:
+                propina = Decimal(
+                    variable_propina.get().strip() or "0"
+                ).quantize(Decimal("0.01"))
+
+                if not propina.is_finite() or propina < 0:
+                    raise ValueError
+
+            except (ValueError, ArithmeticError):
+                messagebox.showwarning(
+                    "Propina inválida",
+                    "Introduce una cantidad válida, por ejemplo 0.00.",
+                    parent=ventana_cobro
+                )
+                return
+
+            if forma_pago not in ("Efectivo", "Tarjeta"):
+                messagebox.showerror(
+                    "Forma de pago inválida",
+                    "La reserva no contiene una forma de pago válida.",
+                    parent=ventana_cobro
+                )
+                return
+
+            total = (subtotal + extra + propina).quantize(
+                Decimal("0.01")
+            )
+
+            if not messagebox.askyesno(
+                    "Confirmar cobro",
+                    f"Subtotal: ${subtotal:.2f}\n"
+                    f"Extra: ${extra:.2f}\n"
+                    f"Propina: ${propina:.2f}\n"
+                    f"TOTAL: ${total:.2f}\n\n"
+                    f"Forma de pago: {forma_pago}\n\n"
+                    "¿Confirmas el pago?",
+                    parent=ventana_cobro
+            ):
+                return
+
+            cobro_en_proceso[0] = True
+            conexion_pago = conectar()
+
+            if not conexion_pago:
+                cobro_en_proceso[0] = False
+                return
+
+            cursor_pago = None
+
+            try:
+                cursor_pago = conexion_pago.cursor()
+                conexion_pago.start_transaction()
+
+                cursor_pago.execute(
+                    """
+                    SELECT id_orden, id_mesa, id_reserva,
+                           pedido_finalizado
+                    FROM Orden
+                    WHERE id_orden = %s
+                      AND id_empleado = %s
+                    FOR UPDATE
+                    """,
+                    (id_orden, id_empleado)
+                )
+
+                orden_bloqueada = cursor_pago.fetchone()
+
+                if not orden_bloqueada:
+                    raise ValueError(
+                        "La orden ya no existe o no pertenece al mesero."
+                    )
+
+                if orden_bloqueada[3]:
+                    raise ValueError(
+                        "Esta orden ya fue finalizada."
+                    )
+
+                cursor_pago.execute("""
+                    SELECT id_factura
+                    FROM Factura
+                    WHERE id_orden = %s
+                      AND estado_pago = 'Pagado'
+                    LIMIT 1
+                """, (id_orden,))
+
+                factura_pagada = cursor_pago.fetchone()
+
+                if factura_pagada:
+                    conexion_pago.rollback()
+
+                    messagebox.showwarning(
+                        "Cuenta ya pagada",
+                        "Esta orden ya tiene una factura pagada.\n"
+                        "No se realizará otro cobro.",
+                        parent=ventana_cobro
+                    )
+
+                    if ventana_cobro.winfo_exists():
+                        ventana_cobro.destroy()
+
+                    return
+
+                # Actualizar una factura pendiente si existe.
+                cursor_pago.execute(
+                    """
+                    SELECT id_factura
+                    FROM Factura
+                    WHERE id_orden = %s
+                      AND estado_pago = 'Pendiente'
+                    ORDER BY id_factura DESC
+                    LIMIT 1
+                    FOR UPDATE
+                    """,
+                    (id_orden,)
+                )
+
+                factura_pendiente = cursor_pago.fetchone()
+
+                servicio_extra = (
+                    f"Cobro extra de reserva: ${extra:.2f}"
+                    if extra else None
+                )
+
+                if solicitud:
+                    texto_solicitud = f"Solicitud: {solicitud}"
+                    servicio_extra = (
+                        f"{servicio_extra} | {texto_solicitud}"
+                        if servicio_extra
+                        else texto_solicitud
+                    )
+
+                if factura_pendiente:
+                    cursor_pago.execute(
+                        """
+                        UPDATE Factura
+                        SET servicio_extra = %s,
+                            subtotal = %s,
+                            propina = %s,
+                            total = %s,
+                            metodo_pago = %s,
+                            estado_pago = 'Pagado'
+                        WHERE id_factura = %s
+                        """,
+                        (
+                            servicio_extra,
+                            subtotal,
+                            propina,
+                            total,
+                            forma_pago,
+                            factura_pendiente[0]
+                        )
+                    )
+                else:
+                    cursor_pago.execute(
+                        """
+                        INSERT INTO Factura (
+                            servicio_extra,
+                            subtotal,
+                            propina,
+                            total,
+                            metodo_pago,
+                            estado_pago,
+                            id_orden
+                        )
+                        VALUES (%s, %s, %s, %s, %s, 'Pagado', %s)
+                        """,
+                        (
+                            servicio_extra,
+                            subtotal,
+                            propina,
+                            total,
+                            forma_pago,
+                            id_orden
+                        )
+                    )
+
+                # Finalizar la orden.
+                cursor_pago.execute(
+                    """
+                    UPDATE Orden
+                    SET pedido_finalizado = 1
+                    WHERE id_orden = %s
+                      AND id_empleado = %s
+                    """,
+                    (id_orden, id_empleado)
+                )
+
+                # Completar la reserva asociada, si corresponde.
+                id_reserva_pago = orden_bloqueada[2]
+
+                if id_reserva_pago:
+                    cursor_pago.execute(
+                        """
+                        UPDATE Reserva
+                        SET estado = 'Completada'
+                        WHERE id_reserva = %s
+                        """,
+                        (id_reserva_pago,)
+                    )
+
+                # No liberar una mesa que tenga otras órdenes activas.
+                id_mesa_pago = orden_bloqueada[1]
+
+                cursor_pago.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM Orden
+                    WHERE id_mesa = %s
+                      AND id_orden <> %s
+                      AND estado IN (
+                          'Pendiente', 'Preparando', 'Entregado'
+                      )
+                      AND pedido_finalizado = 0
+                    """,
+                    (id_mesa_pago, id_orden)
+                )
+
+                otras_ordenes = cursor_pago.fetchone()[0]
+
+                # Mantener la mesa reservada si hay una reserva futura.
+                cursor_pago.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM Reserva
+                    WHERE id_mesa = %s
+                      AND estado = 'Confirmada'
+                      AND (
+                          fecha > %s
+                          OR (fecha = %s AND hora > %s)
+                      )
+                    """,
+                    (
+                        id_mesa_pago,
+                        date.today(),
+                        date.today(),
+                        datetime.now().time().replace(microsecond=0)
+                    )
+                )
+
+                reservas_futuras = cursor_pago.fetchone()[0]
+
+                if otras_ordenes:
+                    estado_mesa = "Ocupada"
+                elif reservas_futuras:
+                    estado_mesa = "Reservada"
+                else:
+                    estado_mesa = "Disponible"
+
+                cursor_pago.execute(
+                    """
+                    UPDATE Mesa
+                    SET estado = %s
+                    WHERE id_mesa = %s
+                    """,
+                    (estado_mesa, id_mesa_pago)
+                )
+
+                conexion_pago.commit()
+
+
+            except Exception as error:
+                try:
+                    conexion_pago.rollback()
+                except mysql.connector.Error:
+                    pass
+
+                messagebox.showerror(
+                    "No se pudo completar el cobro",
+                    "No se confirmó el pago.\n\n"
+                    f"Detalle del error:\n{error}",
+
+                    parent=(
+                        ventana_cobro
+                        if ventana_cobro.winfo_exists()
+                        else ventana
+
+                    )
+                )
+
+                return
+
+            finally:
+                if cursor_pago:
+                    cursor_pago.close()
+                    cobro_en_proceso[0] = False
+
+                conexion_pago.close()
+
+            # Actualizar las vistas después de confirmar la transacción.
+            ventana_cobro.destroy()
+
+            orden_actual[0] = None
+            mesa_actual[0] = None
+            cliente_actual[0] = None
+
+            cargar_reservas()
+            cargar_detalles_orden()
+            actualizar_inicio()
+            cambiar_seccion("CUENTA")
+
+            messagebox.showinfo(
+                "Pago registrado",
+                f"Factura pagada correctamente.\n\n"
+                f"Orden: #{id_orden}\n"
+                f"Total: ${total:.2f}\n"
+                f"Forma de pago: {forma_pago}"
+            )
+
+        crear_boton(
+            marco,
+            "CONFIRMAR COBRO",
+            confirmar_cobro,
+            color=VERDE
+        ).pack(fill="x", pady=(8, 0))
+
+        ventana_cobro.update_idletasks()
+
+        x = ventana.winfo_rootx() + (
+                ventana.winfo_width() - ventana_cobro.winfo_width()
+        ) // 2
+
+        y = ventana.winfo_rooty() + (
+                ventana.winfo_height() - ventana_cobro.winfo_height()
+        ) // 2
+
+        ventana_cobro.geometry(
+            f"+{max(x, 0)}+{max(y, 0)}"
+        )
 
     def quitar_platillo():
         if orden_actual[0] is None:
@@ -1881,6 +2487,7 @@ def interfaz_mesero(usuario=None, rol=None):
 
         cargar_detalles_orden()
 
+
     # =====================================================
     # NAVEGACIÓN LATERAL
     # =====================================================
@@ -1927,26 +2534,32 @@ def interfaz_mesero(usuario=None, rol=None):
         lambda: cambiar_seccion("CUENTA")
     )
 
-    # =====================================================
-    # CERRAR SESIÓN
-    # =====================================================
-
     def cerrar_sesion():
-        if messagebox.askyesno(
+        respuesta = messagebox.askyesno(
             "Cerrar sesión",
-            "¿Deseas cerrar tu sesión?\n\n"
-            "Tu orden activa seguirá guardada y podrás "
-            "retomarla desde MESAS."
-        ):
+            "¿Deseas cerrar sesión?"
+        )
+
+        if not respuesta:
+            return
+
+        try:
+            ruta_login = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "inicio_sistema.py"
+            )
+
+            subprocess.Popen([
+                r"C:\Users\moral\AppData\Local\Programs\Python\Python313\python.exe",
+                ruta_login
+            ])
+
             ventana.destroy()
 
-            # Abre el login como un programa nuevo.
-            subprocess.Popen(
-                [
-                    sys.executable,
-                    os.path.join(BASE_DIR, "inicio_sistema.py")
-                ],
-                cwd=BASE_DIR
+        except Exception as error:
+            messagebox.showerror(
+                "Error al cerrar sesión",
+                f"No se pudo volver al inicio de sesión:\n{error}"
             )
 
     tk.Frame(
@@ -1957,10 +2570,10 @@ def interfaz_mesero(usuario=None, rol=None):
 
     tk.Button(
         menu_navegacion,
-        text="   CERRAR SESIÓN",
-        bg=VINO,
+        text="CERRAR SESIÓN",
+        bg=VERDE_OSCURO,
         fg=CREMA_CLARO,
-        activebackground=VINO_OSCURO,
+        activebackground=CREMA_CLARO,
         activeforeground=BLANCO,
         bd=0,
         relief="flat",
@@ -1972,14 +2585,8 @@ def interfaz_mesero(usuario=None, rol=None):
         command=cerrar_sesion
     ).pack(fill="x", pady=4)
 
-    # =====================================================
-    # CARGA INICIAL
-    # =====================================================
-
     cambiar_seccion("INICIO")
-
     ventana.mainloop()
-
 
 if __name__ == "__main__":
     interfaz_mesero()
